@@ -860,7 +860,7 @@ function vHome(){
      <div class="tmbs">${d.ex.map(x=>`<div class="tmb">${figSVG(x.id)}</div>`).join('')}</div>
      <div class="pills"><span class="pill">${ic('timer')} ≈ ${estDuration(d)} min</span><span class="pill">${d.ex.length} exercices</span><span class="pill">${nSets} séries</span></div>
      <div class="btnrow"><button class="btn" data-a="start" data-d="${nd}">${ic('play',1)} Commencer</button><button class="btn gray ico" data-a="change" aria-label="Changer de séance">${ic('swap')}</button></div></div>
-   ${sec('Nutrition',cell({a:'nav',attrs:'data-v="nutrition"',icon:ic('fork',1),bg:'var(--green)',title:`${N.kcal.toLocaleString('fr-FR')} kcal · ${N.prot} g de protéines`,sub:'Objectifs du jour, timing autour de la séance et idées de repas',chev:true}),null,true)}
+   ${sec('Nutrition',cell({a:'nav',attrs:'data-v="nutrition"',icon:ic('fork',1),bg:'var(--green)',title:NUT().omad?`OMAD · repas à ${fmtH(NUT().meal)}`:`${N.kcal.toLocaleString('fr-FR')} kcal · ${N.prot} g de protéines`,sub:NUT().omad?`${N.kcal.toLocaleString('fr-FR')} kcal et ${N.prot} g de protéines en un repas${NUT().formula==='shake'?' + 1 shaker':''}`:'Objectifs du jour, timing autour de la séance et idées de repas',chev:true}),null,true)}
    ${sec('Temps de repos',
       cell({icon:ic('bolt'),bg:'var(--orange)',title:'Polyarticulaires lourds',sub:'Squat, développé couché, rowing barre, presse',value:'3 min',vcls:'t'})
      +cell({icon:ic('dumbbell',1),bg:'var(--blue)',title:'Polyarticulaires guidés',sub:'Machines convergentes, haltères, tirages',value:'2 min',vcls:'t'})
@@ -930,7 +930,8 @@ function vProfile(){
     ${sec('Réglages',
       cell({icon:ic('speaker'),bg:'var(--red)',title:'Signal sonore',sub:'Bips 3-2-1 à la fin du repos',right:`<button class="sw ${S.settings.sound?'on':''}" data-a="toggleSet" data-k="sound" aria-label="Son"></button>`})
      +cell({icon:ic('wave'),bg:'var(--orange)',title:'Vibrations',sub:'Retours haptiques (iOS 18+) et vibrations Android',right:`<button class="sw ${S.settings.vibe?'on':''}" data-a="toggleSet" data-k="vibe" aria-label="Vibrations"></button>`})
-     +cell({a:'testSound',icon:ic('play',1),bg:'var(--blue)',title:'Tester le son',chev:true}),
+     +cell({a:'testSound',icon:ic('play',1),bg:'var(--blue)',title:'Tester le son',chev:true})
+     +cell({icon:ic('fork',1),bg:'var(--green)',title:'Mode OMAD',sub:'Un repas par jour : réglages dans l’onglet Nutrition',right:`<button class="sw ${NUT().omad?'on':''}" data-a="omadToggle" aria-label="Mode OMAD"></button>`}),
      'Sur iOS 17 et plus, le son est joué même en mode silencieux. Monte le volume avant ta séance.')}
     ${sec('Données',
       cell({a:'export',icon:ic('share'),bg:'var(--blue)',title:'Exporter une sauvegarde',chev:true})
@@ -1249,6 +1250,7 @@ const ING={
  avocat:{n:'Avocat',v:[160,2,1.8,14.7]},
  huile:{n:'Huile d’olive',v:[900,0,0,100]},
  sauce_tomate:{n:'Coulis de tomate',v:[35,1.6,5.5,.3]},
+ baguette:{n:'Baguette',v:[266,9.3,54.8,1.3]},
 };
 const RX=[
  {id:'shake_recup',n:'Shaker récup’ banane-avoine',em:'🥤',c:['shake','post'],g:['masse','recompo','seche'],
@@ -1359,7 +1361,7 @@ const CAT_N={shake:'Shaker',pre:'Pré-séance',post:'Post-séance',repas:'Repas'
 const SLOTS=[['Petit-déjeuner',['porridge','omelette','overnight_oats']],['Déjeuner',['bol_poulet','pates_poulet','bowl_tofu','wrap_thon']],['Pré-séance',['galettes_bc','dattes_grec','shake_pre','tartines_miel']],
  ['Post-séance',['shake_recup','skyr_fruits','shake_seche']],['Dîner',['saumon_pd','chili','bowl_tofu','pates_poulet']],['Collation',['cottage_pomme','oeufs_jambon','shake_caseine','shake_gainer','galettes_bc','tartines_miel']]];
 let rxCat='shake', rxId=null, rxK=1;
-const rxOf=id=>RX.find(r=>r.id===id);
+const rxOf=id=>RX.find(r=>r.id===id)||RX_DYN[id];
 function rxMac(r,k){k=k||1;const o={kcal:0,p:0,c:0,f:0};r.ing.forEach(([id,q])=>{const v=ING[id].v,f=q*k/100;o.kcal+=v[0]*f;o.p+=v[1]*f;o.c+=v[2]*f;o.f+=v[3]*f});return o}
 function macros(p){const N=nutrition(p), fat=Math.round(N.kcal*.25/9), carb=Math.max(0,Math.round((N.kcal-N.prot*4-fat*9)/4));return {...N,fat,carb}}
 function fmtQty(q,ing){
@@ -1395,15 +1397,17 @@ function dayPlan(){
 }
 function vNutrition(){
   const p=S.profile, M=macros(p), per=Math.round(p.weight*.4), P=dayPlan();
-  return page('Nutrition',{sub:`${GOALS[p.goal].n} · objectifs quotidiens`},
-  `<div class="card">
+  const omad=NUT().omad;
+  return page('Nutrition',{sub:`${GOALS[p.goal].n} · ${omad?'mode OMAD, un repas par jour':'objectifs quotidiens'}`},
+  `${sec('',cell({icon:ic('clock',1),bg:omad?'var(--tint)':'var(--gray)',title:'Mode OMAD',sub:'Un seul repas par jour (jeûne intermittent)',right:`<button class="sw ${omad?'on':''}" data-a="omadToggle" aria-label="Mode OMAD"></button>`}))}
+   <div class="card">
      <div class="cap">Objectif du jour</div>
      <div class="bignum">${M.kcal.toLocaleString('fr-FR')}<small>kcal</small></div>
      <div class="mbar"><i style="flex:${M.prot*4};background:var(--P)"></i><i style="flex:${M.carb*4};background:var(--G)"></i><i style="flex:${M.fat*9};background:var(--L)"></i></div>
      <div class="mleg"><div><b style="color:var(--P)">${M.prot} g</b><span>Protéines</span></div><div><b style="color:var(--G)">${M.carb} g</b><span>Glucides</span></div><div><b style="color:var(--L)">${M.fat} g</b><span>Lipides</span></div></div>
      <div class="sub mt">${p.goal==='masse'?'Léger surplus (~10 %) au-dessus':p.goal==='seche'?'Déficit d’environ 20 % sous':'Au niveau de'} ta maintenance estimée (${M.tdee.toLocaleString('fr-FR')} kcal). Protéines : ${fmtNum((M.prot/p.weight).toFixed(1))} g/kg ; lipides : 25 % des calories ; glucides : le reste.</div>
    </div>
-   ${sec('Répartition des protéines',cell({icon:ic('clock',1),bg:'var(--pink)',title:`4 prises d’environ ${per} g`,sub:'0,4 g/kg par repas, espacées de 3 à 4 h'}),'Répartir les protéines sur au moins 4 repas optimise la construction musculaire (Schoenfeld & Aragon, 2018).',true)}
+   ${omad?vOmad():`${sec('Répartition des protéines',cell({icon:ic('clock',1),bg:'var(--pink)',title:`4 prises d’environ ${per} g`,sub:'0,4 g/kg par repas, espacées de 3 à 4 h'}),'Répartir les protéines sur au moins 4 repas optimise la construction musculaire (Schoenfeld & Aragon, 2018).',true)}
    ${sec('Autour de ta séance',
       cell({a:'rxCatGo',attrs:'data-c="repas"',icon:ic('timer'),bg:'var(--blue)',title:'2 à 3 h avant',sub:`Repas complet : ~${r0(p.weight*.3)} g de protéines, des glucides, peu de graisses et de fibres.`,chev:true})
      +cell({a:'rxCatGo',attrs:'data-c="pre"',icon:ic('bolt'),bg:'var(--orange)',title:'30 à 60 min avant',sub:'Collation digeste : glucides rapides et un peu de protéines.',chev:true})
@@ -1411,7 +1415,7 @@ function vNutrition(){
      +cell({a:'rxCatGo',attrs:'data-c="shake"',icon:ic('clock',1),bg:'var(--indigo)',title:'Avant de dormir (optionnel)',sub:'30 à 40 g de caséine pour la synthèse protéique nocturne.',chev:true}),
      'Le total quotidien de protéines reste le facteur principal ; le timing affine les résultats (ISSN, 2017).',true)}
    ${sec('Exemple de journée',P.items.map(o=>{const m=rxMac(o.r,P.k);return cell({a:'rx',attrs:`data-id="${o.r.id}" data-k="${P.k}"`,icon:`<span class="emo">${o.r.em}</span>`,bg:'var(--bg3)',title:esc(o.r.n),sub:`${o.lbl} · ${r0(m.kcal)} kcal · ${r0(m.p)} g de protéines`,chev:true})}).join(''),
-     `Combinaison choisie automatiquement pour coller à tes objectifs (portions ×${fmtNum(P.k)}) : ${r0(P.sum.kcal).toLocaleString('fr-FR')} kcal · ${r0(P.sum.p)} g de protéines · ${r0(P.sum.c)} g de glucides · ${r0(P.sum.f)} g de lipides. Touche une recette pour voir les quantités ajustées.`,true)}
+     `Combinaison choisie automatiquement pour coller à tes objectifs (portions ×${fmtNum(P.k)}) : ${r0(P.sum.kcal).toLocaleString('fr-FR')} kcal · ${r0(P.sum.p)} g de protéines · ${r0(P.sum.c)} g de glucides · ${r0(P.sum.f)} g de lipides. Touche une recette pour voir les quantités ajustées.`,true)}`}
    <div class="sec-h big" style="padding:4px 20px 10px">Idées recettes</div>
    <div class="segwrap" style="margin-bottom:14px">${seg('rxCat',RX_CATS,rxCat,'rxCat')}</div>
    <div id="rxList">${vRxList()}</div>
@@ -1448,6 +1452,156 @@ function nutriSrcSheet(){
       L('Table Ciqual — ANSES','Composition nutritionnelle des aliments (France)','https://ciqual.anses.fr/')
      +L('USDA FoodData Central','Base de données nutritionnelles du ministère américain de l’Agriculture','https://fdc.nal.usda.gov/'),
      'Ces conseils sont généraux et ne remplacent pas l’avis d’un médecin ou d’un diététicien, notamment en cas de pathologie.')}`,{title:'Sources'});
+}
+
+/* =========================================================
+   MODE OMAD (One Meal A Day)
+   - Les besoins du jour (kcal, P, G, L) ne changent pas : ils sont condensés dans un repas
+     unique, ou dans un repas + un shaker densificateur.
+   - Le repas est calculé : la source de protéines, de glucides et de lipides est dosée
+     pour atteindre les cibles, autour d'aliments denses, cuits et digestes.
+   - Bases : un apport de 100 g de protéines en une prise reste utilisé jusqu'à 12 h
+     (Trommelen et al., 2023) ; la masse maigre est maintenue en alimentation restreinte
+     dans le temps quand l'apport protéique est suffisant (Moro et al., 2016), mais un
+     20/4 avec ~1 g/kg de protéines n'a pas permis de prendre du muscle (Tinsley et al., 2016).
+   ========================================================= */
+/* pr : protéine principale · pr2 : dessert lacté dosable (densificateur protéique)
+   cb : féculent principal · cb2 : baguette (densificateur glucidique digeste) · ft : huile d'olive */
+const OMAD_MENUS=[
+ {id:'omad_saumon',n:'Saumon, riz & haricots verts',em:'🐟',pr:'saumon',pr2:'skyr',cb:'riz',fix:[['haricots_verts',150]],top:[['miel',15]]},
+ {id:'omad_boeuf',n:'Bœuf, pâtes & brocolis',em:'🥩',pr:'boeuf5',pr2:'grec',cb:'pates',fix:[['brocoli',150]],top:[['fruits_rouges',100]]},
+ {id:'omad_poulet',n:'Poulet, patate douce & épinards',em:'🍗',pr:'poulet',pr2:'skyr',cb:'patate_douce',fix:[['epinards',60]],top:[['dattes',30]]},
+ {id:'omad_tofu',n:'Bowl tofu, quinoa & pois chiches',em:'🥗',pr:'tofu',pr2:'grec',cb:'quinoa',fix:[['pois_chiches',100],['concombre',80]],top:[['myrtilles',100]]},
+];
+const OMAD_SHAKE_BASE=[['whey',40],['lait',300],['avoine',50],['bcac',15]];
+const CAP={pr:[150,350],pr2:[150,400],cb:[100,500],cb2:[0,250],ft:[0,50]};
+const RX_DYN={};
+function NUT(){ if(!S.nutri) S.nutri={omad:false,formula:'shake',meal:19,train:17,menu:'omad_saumon'}; return S.nutri }
+const fmtH=h=>`${Math.floor(h)}:${h%1?'30':'00'}`;
+function solveMenu(menu,T){
+  const V={pr:menu.pr,pr2:menu.pr2,cb:menu.cb,cb2:'baguette',ft:'huile'}, q={pr:200,pr2:150,cb:250,cb2:0,ft:5};
+  const fixed=[...menu.fix,...menu.top], fx={p:0,c:0,f:0}, MI={p:1,c:2,f:3};
+  fixed.forEach(([id,g])=>{const v=ING[id].v;fx.p+=v[1]*g/100;fx.c+=v[2]*g/100;fx.f+=v[3]*g/100});
+  const per=(k,m)=>ING[V[k]].v[MI[m]]/100, cl=(k,x)=>Math.max(CAP[k][0],Math.min(CAP[k][1],x));
+  const others=(m,ex)=>{let o=fx[m];for(const k in q) if(!ex.includes(k)) o+=per(k,m)*q[k];return o};
+  for(let it=0;it<100;it++){
+    // protéines : source principale, puis dessert lacté si le plafond est atteint
+    let need=T.p-others('p',['pr','pr2']); q.pr=cl('pr',(need-per('pr2','p')*CAP.pr2[0])/per('pr','p')); q.pr2=cl('pr2',(need-per('pr','p')*q.pr)/per('pr2','p'));
+    // glucides : féculent principal, puis baguette
+    need=T.c-others('c',['cb','cb2']); q.cb=cl('cb',need/per('cb','c')); q.cb2=cl('cb2',(need-per('cb','c')*q.cb)/per('cb2','c'));
+    // lipides : huile d'olive pour compléter
+    q.ft=cl('ft',(T.f-others('f',['ft']))/per('ft','f'));
+  }
+  const R=(k,x)=>k==='ft'?Math.round(x):Math.round(x/10)*10;
+  const out=[[V.pr,R('pr',q.pr)],[V.cb,R('cb',q.cb)],...menu.fix];
+  if(q.cb2>=15) out.push(['baguette',R('cb2',q.cb2)]);
+  if(q.ft>=2) out.push(['huile',R('ft',q.ft)]);
+  out.push([V.pr2,R('pr2',q.pr2)],...menu.top);
+  return out;
+}
+function omadTiming(){
+  const n=NUT(), d=((n.meal-n.train)%24+24)%24;
+  if(d>=1&&d<=3) return {lvl:'ok',t:'Repas placé après la séance',s:`Tu manges environ ${fmtNum(d)} h après le début de ta séance : récupération optimale et entraînement l’estomac léger.`,shakeWhen:'En fin de repas ou dans l’heure qui suit'};
+  if(d<1) return {lvl:'warn',t:'Séance et repas trop proches',s:'Termine ta séance avant de manger : prévois le repas 1 à 3 h après le début de l’entraînement.',shakeWhen:'Juste après la séance'};
+  if(d>21) return {lvl:'bad',t:'Séance l’estomac plein',s:`Ta séance commence moins de ${fmtNum(24-d)} h après le repas : risque d’inconfort digestif. Place la séance avant le repas, ou au moins 3 h après.`,shakeWhen:'En fin de repas'};
+  return {lvl:'warn',t:'Séance loin du repas',s:`${fmtNum(d)} h séparent la séance du repas. Choisis la formule « Repas + shaker » et prends le shaker juste après l’entraînement, ou rapproche le repas de la séance.`,shakeWhen:'Juste après la séance (rompt le jeûne, mais protège la récupération)'};
+}
+function omadPlan(){
+  const n=NUT(), M=macros(S.profile), menu=OMAD_MENUS.find(m=>m.id===n.menu)||OMAD_MENUS[0], tm=omadTiming();
+  let T={p:M.prot,c:M.carb,f:M.fat}, shake=null;
+  if(n.formula==='shake'){
+    const wh=Math.max(25,Math.min(40,Math.round(S.profile.weight*.5/5)*5)), base=rxMac({ing:OMAD_SHAKE_BASE}).kcal, share=S.profile.goal==='masse'?.36:.28, ks=Math.min(2,Math.max(.6,(M.kcal*share-wh*3.9)/(base-156)));
+    const sing=OMAD_SHAKE_BASE.map(([id,g])=>[id,id==='whey'?wh:Math.round(g*ks/(id==='bcac'?1:5))*(id==='bcac'?1:5)]);
+    shake={id:'omad_shake',n:'Shaker densificateur',em:'🥤',c:['shake'],g:['masse','recompo','seche'],ing:sing,
+      when:tm.shakeWhen,whenWhy:'Il complète le repas unique sans ajouter de volume dans l’assiette : les calories liquides se boivent plus facilement qu’elles ne se mangent.',
+      why:[`Environ ${Math.round(rxMac({ing:sing}).p)} g de protéines en plus du repas, dosé selon tes besoins.`,'Glucides (avoine) et lipides (beurre de cacahuète) concentrés dans un petit volume.','Si la séance est loin du repas, le prendre juste après l’entraînement apporte les protéines au bon moment.'],
+      steps:['Mixer l’avoine à sec 10 secondes.','Ajouter le lait, la whey et le beurre de cacahuète.','Mixer 30 secondes ; boire tranquillement, en deux fois si le volume est important.']};
+    const m=rxMac(shake); T={p:T.p-m.p,c:T.c-m.c,f:T.f-m.f}; RX_DYN.omad_shake=shake;
+  }
+  const meal={id:menu.id,n:menu.n,em:menu.em,c:['repas'],g:['masse','recompo','seche'],ing:solveMenu(menu,T),
+    when:`Repas unique à ${fmtH(n.meal)}`,whenWhy:tm.s,
+    why:['Toutes tes protéines du jour en un repas : une prise de 100 g reste utilisée par les muscles jusqu’à 12 h après (Trommelen et al., 2023).','Aliments denses et cuits : moins de volume dans l’estomac qu’avec de grosses salades crues ou des féculents très riches en fibres.','Le dessert lacté (skyr ou yaourt grec) et la baguette servent de « densificateurs » : protéines et glucides faciles à manger quand l’assiette est déjà copieuse.'],
+    steps:[`Préparer ${ING[menu.cb].n.toLowerCase()} et les légumes à l’avance (ou en lot pour la semaine).`,`Cuire ${ING[menu.pr].n.toLowerCase().replace(/ cuit$| \(cru\)$/,'')} avec l’huile d’olive.`,'Rompre le jeûne avec un verre d’eau, puis commencer par la protéine et les légumes.','Manger en deux temps sur 45 à 60 min, en mâchant bien ; garder le dessert pour la fin.']};
+  RX_DYN[meal.id]=meal;
+  const mm=rxMac(meal), sm=shake?rxMac(shake):{kcal:0,p:0,c:0,f:0};
+  return {menu,meal,shake,mm,sm,tot:{kcal:mm.kcal+sm.kcal,p:mm.p+sm.p,c:mm.c+sm.c,f:mm.f+sm.f},M,tm,weight:meal.ing.reduce((a,[,g])=>a+g,0)};
+}
+function omadBar(){
+  const n=NUT(), W=320, x=h=>h/24*W, win=1.5, seg=(a,len,y,h,fill)=>{let out='';const b=a+len;
+    if(b<=24) out=`<rect x="${x(a)}" y="${y}" width="${x(len)}" height="${h}" rx="${h/2}" fill="${fill}"/>`;
+    else out=`<rect x="${x(a)}" y="${y}" width="${x(24-a)}" height="${h}" rx="${h/2}" fill="${fill}"/><rect x="0" y="${y}" width="${x(b-24)}" height="${h}" rx="${h/2}" fill="${fill}"/>`;
+    return out};
+  const xm=Math.min(296,Math.max(24,x(n.meal+win/2))); let xt=Math.min(296,Math.max(24,x(n.train+.6))); if(Math.abs(xt-xm)<50) xt=xm+(xt<xm?-50:50);
+  return `<svg viewBox="0 0 320 62" style="width:100%;display:block;margin:12px 0 4px" aria-label="Fenêtre d’alimentation sur 24 h">
+    <text x="${xm}" y="12" text-anchor="middle" font-size="11" font-weight="600" fill="var(--tint)">Repas</text>
+    <text x="${Math.min(296,Math.max(24,xt))}" y="12" text-anchor="middle" font-size="11" font-weight="600" fill="var(--orange)">Séance</text>
+    <rect x="0" y="20" width="320" height="14" rx="7" fill="rgba(118,118,128,.24)"/>
+    ${seg(n.meal,win,20,14,'var(--tint)')}${seg(n.train,1.25,38,6,'var(--orange)')}
+    ${[0,6,12,18,24].map(h=>`<text x="${Math.min(312,Math.max(8,x(h)))}" y="60" text-anchor="middle" font-size="10" fill="rgba(235,235,245,.45)">${h} h</text>`).join('')}
+  </svg>`;
+}
+function vOmad(){
+  const n=NUT(), P=omadPlan(), p=S.profile, tm=P.tm, col={ok:'var(--green)',warn:'var(--orange)',bad:'var(--red)'}[tm.lvl];
+  const hstep=(k,lbl)=>`<div class="cell"><span class="cbody"><span class="ct">${lbl}</span></span><div class="stp" style="width:132px;flex:none"><button data-a="omadH" data-k="${k}" data-d="-1" aria-label="Plus tôt">${ic('minus')}</button><span>${fmtH(n[k])}</span><button data-a="omadH" data-k="${k}" data-d="1" aria-label="Plus tard">${ic('plus')}</button></div></div>`;
+  const dev=(v,t)=>{const d=Math.round((v-t)/t*100);return Math.abs(d)<=10?'<span style="color:var(--green)">✓</span>':`<span style="color:var(--orange)">${d>0?'+':''}${d} %</span>`};
+  return `
+   ${sec('Fenêtre d’alimentation',
+      `<div class="cell stack"><span class="ct">Formule</span>${seg('formula',[['meal','1 repas'],['shake','1 repas + 1 shaker']],n.formula,'omadF')}<span class="cs">${n.formula==='shake'?'Un shaker densificateur allège l’assiette : recommandé en prise de masse ou si la séance est loin du repas.':'Tout dans une seule assiette : demande un repas très copieux.'}</span></div>`
+      +hstep('meal','Début du repas')+hstep('train','Début de la séance')
+      +`<div class="cell" style="display:block">${omadBar()}<div class="cs center">Jeûne d’environ 22 h 30 · fenêtre de 1 h 30</div></div>`
+      +cell({icon:ic(tm.lvl==='ok'?'checkCircle':'warn',1),bg:col,title:tm.t,sub:tm.s}),null,true)}
+   ${p.goal==='masse'&&n.formula==='meal'?`<div class="card alert">${ic('warn')}<div><b style="font-size:15px">OMAD et prise de masse</b><div class="sub" style="font-size:13px;line-height:18px">Atteindre un surplus en un seul repas est difficile. Dans une étude en 20/4 avec peu de protéines, la masse maigre n’a pas progressé (Tinsley et al., 2016). Passe en formule « 1 repas + 1 shaker ».</div></div></div>`:''}
+   ${P.tot.kcal<P.M.kcal*.9?`<div class="card alert">${ic('warn')}<div><b style="font-size:15px">Objectif difficile à atteindre en un repas</b><div class="sub" style="font-size:13px;line-height:18px">Il manque environ ${r0(P.M.kcal-P.tot.kcal)} kcal pour une assiette de taille raisonnable. ${n.formula==='meal'?'Passe en formule « 1 repas + 1 shaker », ou ':''}élargis ta fenêtre à 2 repas (16/8 par exemple).</div></div></div>`:''}
+   <div class="sec-h big" style="padding:4px 20px 10px">Ton repas unique</div>
+   <div class="segwrap" style="margin-bottom:14px">${seg('menu',OMAD_MENUS.map(m=>[m.id,m.em]),n.menu,'omadMenu')}</div>
+   ${sec('',cell({a:'rx',attrs:`data-id="${P.meal.id}"`,icon:`<span class="emo">${P.meal.em}</span>`,bg:'var(--bg3)',title:esc(P.meal.n),sub:`${r0(P.mm.kcal)} kcal · <b class="mP">P ${r0(P.mm.p)}</b> · <b class="mG">G ${r0(P.mm.c)}</b> · <b class="mL">L ${r0(P.mm.f)}</b><br>${P.meal.ing.map(([id,g])=>`${ING[id].n.split(' ')[0]} ${g} ${ING[id].u||'g'}`).join(' · ')}`,chev:true})
+      +(P.shake?cell({a:'rx',attrs:'data-id="omad_shake"',icon:`<span class="emo">🥤</span>`,bg:'var(--bg3)',title:'Shaker densificateur',sub:`${r0(P.sm.kcal)} kcal · <b class="mP">P ${r0(P.sm.p)}</b> · <b class="mG">G ${r0(P.sm.c)}</b> · <b class="mL">L ${r0(P.sm.f)}</b><br>${esc(tm.shakeWhen)}`,chev:true}):''))}
+   <section class="sec"><div class="grp stats4">
+     <div><b>${r0(P.tot.kcal)}</b><span>kcal ${dev(P.tot.kcal,P.M.kcal)}</span></div><div><b class="mP">${r0(P.tot.p)} g</b><span>Prot. ${dev(P.tot.p,P.M.prot)}</span></div><div><b class="mG">${r0(P.tot.c)} g</b><span>Gluc. ${dev(P.tot.c,P.M.carb)}</span></div><div><b class="mL">${r0(P.tot.f)} g</b><span>Lip. ${dev(P.tot.f,P.M.fat)}</span></div></div>
+     <div class="sec-f">Objectif : ${P.M.kcal.toLocaleString('fr-FR')} kcal · ${P.M.prot} g de protéines · ${P.M.carb} g de glucides · ${P.M.fat} g de lipides. Quantités calculées automatiquement. Assiette d’environ ${(Math.round(P.weight/50)*50).toLocaleString('fr-FR')} g${P.weight>1300?' : volume important, préfère la formule avec shaker ou mange en deux services dans ta fenêtre':''}.</div></section>
+   ${sec('Conseils OMAD',
+      cell({a:'omadTips',attrs:'data-t="eau"',icon:ic('wave'),bg:'var(--blue)',title:'Hydratation pendant le jeûne',sub:`Vise au moins ${p.sex==='F'?'2':'2,5'} L de boissons par jour, plus pendant l’effort.`,chev:true})
+     +cell({a:'omadTips',attrs:'data-t="sel"',icon:ic('bolt'),bg:'var(--orange)',title:'Électrolytes',sub:'Eau minérale riche en sodium et magnésium contre maux de tête et vertiges.',chev:true})
+     +cell({a:'omadTips',attrs:'data-t="digest"',icon:ic('fork',1),bg:'var(--green)',title:'Rompre le jeûne et bien digérer',sub:'Protéines et légumes cuits d’abord, 45 à 60 min pour manger.',chev:true})
+     +cell({a:'omadTips',attrs:'data-t="train"',icon:ic('dumbbell',1),bg:'var(--purple)',title:'S’entraîner à jeun',sub:'Possible pour la musculation ; adapte si tu as des vertiges.',chev:true})
+     +cell({a:'omadTips',attrs:'data-t="avoid"',icon:ic('warn',1),bg:'var(--red)',title:'Qui doit éviter l’OMAD',sub:'Diabète, grossesse, troubles alimentaires, moins de 18 ans…',chev:true}),
+     null,true)}`;
+}
+function omadTipsSheet(t){
+  const p=S.profile, L=(x)=>`<div class="cell top" style="--inset:52px"><span class="mk g">${ic('checkCircle',1)}</span><span class="cbody"><span class="ct sm">${x}</span></span></div>`,
+        W=(x)=>`<div class="cell top" style="--inset:52px"><span class="mk r">${ic('xcircle')}</span><span class="cbody"><span class="ct sm">${x}</span></span></div>`;
+  const T={
+   eau:['Hydratation',[
+     L(`L’EFSA fixe l’apport total en eau à environ ${p.sex==='F'?'2,0':'2,5'} L par jour (boissons et aliments). En OMAD, les aliments apportent moins d’eau : compense en buvant régulièrement dès le réveil.`),
+     L('Ajoute environ 0,4 à 0,8 L par heure d’entraînement, à ajuster selon la transpiration.'),
+     L('Café, thé et infusions sans sucre ni lait ne rompent pas le jeûne. Limite la caféine à jeun si elle te donne des palpitations ou des brûlures d’estomac.'),
+     L('Repère simple : des urines claires et pas de soif marquée.')],'Source : EFSA, valeurs de référence pour l’eau (2010).'],
+   sel:['Électrolytes',[
+     L('Pendant un long jeûne, maux de tête, fatigue et vertiges peuvent venir d’un manque de sodium et d’eau.'),
+     L('Une eau minérale riche en sodium et en magnésium, ou une pincée de sel dans ta gourde, aide souvent à les prévenir.'),
+     L('Le repas unique doit apporter le potassium et le magnésium : légumes, légumineuses, fruits, produits laitiers, oléagineux.'),
+     W('Demande l’avis de ton médecin avant d’ajouter sel ou électrolytes si tu prends un traitement pour la tension ou le cœur, ou en cas de maladie rénale.')],'Les personnes sous traitement pour la tension ou le cœur sont plus exposées aux déséquilibres de sodium et de potassium pendant le jeûne.'],
+   digest:['Rompre le jeûne et bien digérer',[
+     L('Commence par un verre d’eau, puis la protéine et les légumes cuits ; garde féculents et dessert pour la suite.'),
+     L('Prends 45 à 60 min : mâche bien, fais une pause entre les deux services de ta fenêtre.'),
+     L('Privilégie les aliments denses et cuits (riz, pommes de terre, patate douce, poisson, viande maigre) plutôt que de très gros volumes de crudités ou de légumineuses.'),
+     L('Les calories liquides (shaker, lait) apportent de l’énergie sans remplir l’estomac.'),
+     W('Évite de rompre le jeûne avec un repas très gras ou frit : il ralentit la digestion et alourdit.')],'Si la digestion reste difficile, élargis ta fenêtre à 2 ou 3 h ou passe à 2 repas : le total de la journée compte plus que le nombre de repas.'],
+   train:['S’entraîner à jeun',[
+     L('Pour la musculation, l’essentiel est d’atteindre ton total de calories et de protéines sur la journée.'),
+     L('Placer la séance 1 à 3 h avant le repas évite de s’entraîner l’estomac plein et fait du repas un vrai repas de récupération.'),
+     L('Si la séance est loin du repas, un shaker de whey juste après l’entraînement protège la récupération (formule « repas + shaker »).'),
+     W('Arrête la séance et mange si tu as des vertiges, des nausées, des tremblements ou une baisse nette de performance.')],'Les études en alimentation restreinte dans le temps (16/8) montrent un maintien de la force et de la masse maigre quand les protéines sont suffisantes (Moro et al., 2016).'],
+   avoid:['Qui doit éviter l’OMAD',[
+     W('Moins de 18 ans : la croissance demande des apports réguliers.'),
+     W('Grossesse, allaitement ou projet de grossesse.'),
+     W('Diabète, hypoglycémies, ou traitement qui agit sur la glycémie.'),
+     W('Antécédents de troubles du comportement alimentaire.'),
+     W('Traitement pour la tension ou le cœur, maladie rénale ou autre maladie chronique, sans avis médical.'),
+     L('Dans une étude de 8 semaines sur des adultes en bonne santé, un repas par jour a fait perdre un peu plus de gras, mais a augmenté la tension artérielle, le LDL-cholestérol et la glycémie à jeun. Fais un bilan avec ton médecin si tu le pratiques longtemps.')],'Ces conseils sont généraux et ne remplacent pas l’avis d’un médecin.'],
+  }[t];
+  openSheet(`<div class="pad"><div class="t2">${T[0]}</div></div>${sec('',T[1].join(''),T[2])}
+   ${t==='avoid'?sec('Sources',['Stote et al., 2007 — Am J Clin Nutr|https://pubmed.ncbi.nlm.nih.gov/17413096/','Trommelen et al., 2023 — Cell Reports Medicine|https://pmc.ncbi.nlm.nih.gov/articles/PMC10772463/','Moro et al., 2016 — J Transl Med|https://pubmed.ncbi.nlm.nih.gov/27737674/','Tinsley et al., 2016 — Eur J Sport Sci|https://www.gwern.net/doc/longevity/fasting/2016-tinsley.pdf'].map(x=>{const [a,u]=x.split('|');return `<a class="cell" href="${u}" target="_blank" rel="noopener"><span class="cbody"><span class="ct sm">${a}</span></span>${CH}</a>`}).join('')):''}`,{title:'OMAD'});
 }
 
 /* ---------- Actions ---------- */
@@ -1493,6 +1647,17 @@ document.addEventListener('click',ev=>{
     case 'rx': rxSheet(el.dataset.id, el.dataset.k?+el.dataset.k:1); break;
     case 'rxK': { rxK=Math.min(3,Math.max(.5,Math.round((rxK+(+el.dataset.d)*.25)*4)/4)); const b=$('#rxBody'); if(b) b.innerHTML=rxBody(); haptic(); break; }
     case 'nutriSrc': nutriSrcSheet(); break;
+    case 'omadToggle': {
+      const n=NUT();
+      if(n.omad){ n.omad=false; save(); render(); toast('Mode OMAD désactivé'); break; }
+      el.classList.remove('on');
+      actionSheet({title:'Activer le mode OMAD ?',msg:'Un seul repas par jour. Déconseillé avant 18 ans, pendant une grossesse, en cas de diabète, d’hypoglycémies, de troubles alimentaires ou de traitement pour la tension ou le cœur. Demande l’avis de ton médecin en cas de doute.',
+        actions:[{label:'Activer le mode OMAD',style:'bold',fn:()=>{n.omad=true; if(S.profile.goal==='masse') n.formula='shake'; save(); if(view!=='nutrition') go('nutrition'); else render(); toast('Mode OMAD activé','clock')}}]});
+      break; }
+    case 'omadF': { NUT().formula=el.dataset.val; segUpdate(el); haptic(); save(); setTimeout(render,280); break; }
+    case 'omadMenu': { NUT().menu=el.dataset.val; segUpdate(el); haptic(); save(); setTimeout(render,280); break; }
+    case 'omadH': { const n=NUT(), k=el.dataset.k; n[k]=((n[k]+(+el.dataset.d)*.5)%24+24)%24; save(); render(); break; }
+    case 'omadTips': omadTipsSheet(el.dataset.t); break;
     case 'histInfo': histSheet(+el.dataset.i); break;
     case 'validate': { unlockAudio(); const e=A.ex[A.cur], i=openIdx(e); if(i<0) return; e.sets[i].done=true; afterSet(e); break; }
     case 'toggle': { unlockAudio(); const e=A.ex[A.cur], s=e.sets[+el.dataset.i]; if(s.done){s.done=false;haptic();save();render()} else {s.done=true;afterSet(e)} break; }
