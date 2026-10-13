@@ -10,6 +10,10 @@
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark">
 <title>Coach Muscu</title>
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
 <style>
 /* =========================================================
    Design inspiré des Human Interface Guidelines d'Apple
@@ -1703,23 +1707,7 @@ document.addEventListener('change',ev=>{
 });
 
 /* ---------- Icône & manifeste générés (PWA mono-fichier) ---------- */
-function makeIcon(size){
-  const c=document.createElement('canvas'); c.width=c.height=size; const x=c.getContext('2d'), s=size/180;
-  x.fillStyle='#000000'; x.fillRect(0,0,size,size);
-  x.fillStyle='#c8ff2e';
-  const rr=(X,Y,W,H,R)=>{x.beginPath();x.moveTo(X+R,Y);x.arcTo(X+W,Y,X+W,Y+H,R);x.arcTo(X+W,Y+H,X,Y+H,R);x.arcTo(X,Y+H,X,Y,R);x.arcTo(X,Y,X+W,Y,R);x.fill()};
-  rr(40*s,60*s,18*s,60*s,5*s); rr(122*s,60*s,18*s,60*s,5*s); rr(24*s,72*s,14*s,36*s,4*s); rr(142*s,72*s,14*s,36*s,4*s); rr(56*s,84*s,68*s,12*s,3*s);
-  return c.toDataURL('image/png');
-}
-function setupPWA(){
-  try{
-    const i180=makeIcon(180), i512=makeIcon(512);
-    const l=document.createElement('link'); l.rel='apple-touch-icon'; l.href=i180; document.head.appendChild(l);
-    const start=location.href.split('#')[0].split('?')[0];
-    const man={name:'Coach Muscu',short_name:'Coach Muscu',start_url:start,scope:start.replace(/[^/]*$/,''),display:'standalone',background_color:'#000000',theme_color:'#000000',orientation:'portrait',icons:[{src:i512,sizes:'512x512',type:'image/png'},{src:i180,sizes:'180x180',type:'image/png'}]};
-    const m=document.createElement('link'); m.rel='manifest'; m.href=URL.createObjectURL(new Blob([JSON.stringify(man)],{type:'application/manifest+json'})); document.head.appendChild(m);
-  }catch(e){}
-}
+function setupPWA(){ /* icônes et manifeste déclarés en dur dans <head> (fichiers PNG du dépôt) */ }
 
 /* ---------- Démarrage ---------- */
 if(S.profile && !S.program){S.program=generate(S.profile);save()}
