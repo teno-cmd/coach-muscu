@@ -2737,7 +2737,12 @@ document.addEventListener('change',ev=>{
 });
 
 /* ---------- Icône & manifeste générés (PWA mono-fichier) ---------- */
-function setupPWA(){ /* icônes et manifeste déclarés en dur dans <head> (fichiers PNG du dépôt) */ }
+function setupPWA(){ /* icônes et manifeste déclarés en dur dans <head> (fichiers PNG du dépôt) */
+  /* Service worker : requis par Android (Samsung Internet notamment) pour proposer l'installation, et permet l'ouverture hors connexion. */
+  if(!('serviceWorker' in navigator) || !(location.protocol==='https:'||location.hostname==='localhost')) return;
+  const reg=()=>navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if(document.readyState==='complete') reg(); else window.addEventListener('load',reg);
+}
 
 /* ---------- Démarrage ---------- */
 if(S.profile && !S.program){S.program=generate(S.profile);save()}
