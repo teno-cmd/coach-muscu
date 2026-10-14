@@ -1701,6 +1701,7 @@ function vProfile(){
      +cell({icon:ic('fork',1),bg:'var(--green)',title:'Mode OMAD',sub:'Un repas par jour : réglages dans l’onglet Nutrition',right:`<button class="sw ${NUT().omad?'on':''}" data-a="omadToggle" aria-label="Mode OMAD"></button>`}),
      'Sur iOS 17 et plus, le son est joué même en mode silencieux. Monte le volume avant ta séance.')}
     ${p.place==='home'?eqShopSec():''}
+    ${sec('Accessoires de salle',gearLink('sangles','Pour garder la prise sur les tirages lourds')+gearLink('ceinture','Pour les squats et soulevés lourds')+gearLink('gourde'),shopNote())}
     ${supportSec()}
     ${isStandalone()?'':sec('Application',cell({a:'installGuide',icon:ic('down'),bg:'var(--blue)',title:'Installer sur l’écran d’accueil',chev:true}))}
     ${sec('Données',
@@ -1815,6 +1816,7 @@ function finish(){
   openSheet(`<div class="pad center"><div class="hero-ic">${ic('trophy')}</div><h2 class="lt" style="font-size:28px;line-height:34px">Bien joué !</h2><div class="sub">${esc(entry.n)} terminée</div></div>
    <div class="sec"><div class="grp stats4 c3"><div><b>${Math.max(1,Math.round(entry.dur/60000))} min</b><span>Durée</span></div><div><b>${entry.sets}</b><span>Séries</span></div><div><b>${fmtVol(entry.vol)}</b><span>Volume</span></div></div></div>
    ${prs.length?sec('Nouveaux records',prs.map(p=>cell({icon:ic('trophy'),bg:'var(--orange)',title:esc(p)})).join('')):''}
+   ${supportCard(prs)}
    ${sec('',cell({icon:ic('sparkles'),bg:'var(--indigo)',title:'Progression automatique',sub:'Quand toutes tes séries atteignent le haut de la fourchette, la charge augmente à la séance suivante.'}))}
    <div class="btnwrap"><button class="btn" data-a="closeSheet">Terminé</button></div>`,{title:'Résumé'});
 }
@@ -2208,6 +2210,8 @@ function vNutrition(){
    <div class="sec-h big" style="padding:4px 20px 10px">Idées recettes</div>
    <div class="segwrap" style="margin-bottom:14px">${seg('rxCat',RX_CATS,rxCat,'rxCat')}</div>
    <div id="rxList">${vRxList()}</div>
+   ${sec('Compléments & accessoires',cell({a:'crea',icon:'<span class="emo">💊</span>',bg:'var(--bg3)',title:'Créatine monohydrate',sub:'Le complément le plus étudié : à quoi elle sert, combien en prendre',chev:true})
+     +gearLink('balance','Pèse tes aliments : ton compteur de calories devient précis')+gearLink('shaker','Pour tes shakers de whey'),shopNote())}
    ${sec('',cell({a:'nutriSrc',icon:ic('book'),bg:'var(--indigo)',title:'Sources et méthode',sub:'ISSN, Schoenfeld & Aragon, Ciqual (ANSES), USDA',chev:true}))}`);
 }
 function vRxList(){
@@ -2219,6 +2223,27 @@ function vRxList(){
 /* ---------- Où l'acheter (liens d'affiliation) ---------- */
 const SHOP_ING={whey:'whey protéine',caseine:'caséine micellaire',bcac:'beurre de cacahuète 100 %',avoine:'flocons d’avoine',galette_riz:'galettes de riz soufflé'};
 const SHOP_EQ={halt:'haltères réglables',kettlebell:'kettlebell',elastique:'élastiques de résistance musculation',traction:'barre de traction porte',banc:'banc de musculation inclinable',barre:'barre et disques musculation'};
+const SHOP_GEAR={creatine:['💊','Créatine monohydrate','créatine monohydrate creapure'],balance:['⚖️','Balance de cuisine','balance de cuisine précise 1 g'],shaker:['🥤','Shaker','shaker protéine'],
+ sangles:['🪢','Sangles de tirage','sangles de tirage musculation'],ceinture:['🏋️','Ceinture de force','ceinture de force musculation'],gourde:['💧','Gourde 1 L','gourde sport 1 litre']};
+const gearLink=(k,sub)=>{const [em,n,q]=SHOP_GEAR[k];return shopLink(`${em} ${n}`,sub||'Voir sur Amazon',shopURL(q))};
+/* Message de soutien : seulement à la fin d'une séance, après un record ou un palier (10, 25, 50, 100… séances),
+   au plus une fois par mois, et jamais si l'utilisateur a choisi « Ne plus afficher ». */
+function supportCard(prs){
+  const st=S.settings, n=S.history.length, milestone=[10,25,50,75,100,150,200,300,500].includes(n);
+  if(!MONEY.support.url||st.noSupport||!(milestone||(prs.length&&n>=5))||Date.now()-(st.supAsk||0)<30*dayMs) return '';
+  st.supAsk=Date.now(); save();
+  const t=milestone?`${n} séances avec Coach Muscu ! 💪`:'Nouveau record, bravo ! 🏆';
+  return `<div class="sec" id="supCard"><div class="grp" style="padding:16px"><div class="ct" style="font-weight:600">${t}</div>
+    <div class="cs" style="margin:6px 0 14px;line-height:20px">Coach Muscu est gratuite, sans abonnement et sans pub intrusive. Si elle t’aide à progresser, tu peux offrir un café au développeur ☕</div>
+    <a class="btn gray" href="${MONEY.support.url}" target="_blank" rel="noopener" style="display:flex;justify-content:center">❤️ Offrir un café</a>
+    <div style="display:flex;justify-content:space-between;margin-top:12px"><button class="tbtn" data-a="supLater">Plus tard</button><button class="tbtn" data-a="supNever" style="color:var(--label2)">Ne plus afficher</button></div></div></div>`;
+}
+function creaSheet(){
+  const L=t=>`<div class="cell top" style="--inset:52px"><span class="mk g">${ic('checkCircle',1)}</span><span class="cbody"><span class="ct sm">${t}</span></span></div>`;
+  openSheet(`<div class="pad"><div class="rxhero">💊</div><div class="t2 center">Créatine monohydrate</div><div class="sub center mt">Le complément le plus étudié en musculation</div></div>
+   ${sec('Ce que disent les études',L('Améliore la force et les gains de masse musculaire quand elle est associée à l’entraînement.')+L('Dose : 3 à 5 g par jour, tous les jours, à n’importe quel moment. La phase de charge n’est pas nécessaire.')+L('La forme monohydrate est la plus étudiée et la moins chère ; le label Creapure garantit la pureté.')+L('Prise de poids de 1 à 2 kg au début : c’est de l’eau stockée dans les muscles, pas du gras.'),'Source : prise de position de l’ISSN sur la créatine (Kreider et al., 2017). Demande l’avis d’un médecin en cas de maladie rénale ou de traitement.')}
+   ${sec('Où l’acheter',gearLink('creatine','Monohydrate, idéalement Creapure'),shopNote())}`,{title:'Complément'});
+}
 function shopURL(q,shop){const e=encodeURIComponent(q);
   return shop==='decathlon'?`https://www.decathlon.fr/search?Ntt=${e}`:`https://www.amazon.fr/s?k=${e}${MONEY.amazonTag?'&tag='+encodeURIComponent(MONEY.amazonTag):''}`}
 const shopLink=(title,sub,url)=>`<a class="cell" href="${url}" target="_blank" rel="noopener sponsored"><span class="cbody"><span class="ct sm">${title}</span>${sub?`<span class="cs">${sub}</span>`:''}</span>${CH}</a>`;
@@ -2826,6 +2851,9 @@ document.addEventListener('click',ev=>{
     case 'splitPick': { const k=el.dataset.k, apply=()=>{ S.profile.split=k; S.profile.days=SPLITS[k].days.length; S.program=generate(S.profile); S.cycle={done:[],skipped:[]}; EDIT=null; progDay=null; save(); closeSheet(); render(); toast(`Split : ${SPLITS[k].n}`) };
       if(S.program.custom) actionSheet({title:'Remplacer ton programme personnalisé ?',msg:'Tes séances modifiées seront remplacées par le nouveau split. Ton historique est conservé.',actions:[{label:'Changer de split',style:'destructive',fn:apply}]}); else apply(); break; }
     case 'resetAuto': actionSheet({title:'Revenir au programme automatique ?',msg:'Tes séances modifiées seront remplacées. Ton historique est conservé.',actions:[{label:'Revenir au programme auto',style:'destructive',fn:()=>{S.program=generate(S.profile);S.cycle={done:[],skipped:[]};EDIT=null;progDay=null;save();render();toast('Programme automatique rétabli')}}]}); break;
+    case 'crea': creaSheet(); break;
+    case 'supNever': S.settings.noSupport=true; save(); const sc=$('#supCard'); if(sc) sc.remove(); toast('C’est noté, ce message ne reviendra plus'); break;
+    case 'supLater': { const sc=$('#supCard'); if(sc) sc.remove(); break; }
     case 'progJump': progDay=+el.dataset.i; render(); window.scrollTo({top:0,behavior:'smooth'}); break;
     case 'skipDay': { const i=+el.dataset.d; ensureCycle(); S.cycle.done.push(i); S.cycle.skipped.push(i); ensureCycle(); progDay=null; save(); closeSheet(); render(); toast('Séance sautée · planning réajusté','forward'); break; }
     case 'rappel': unlockAudio(); startDay(-1,buildRappel(el.dataset.g)); break;
