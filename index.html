@@ -2376,19 +2376,19 @@ function simFoods(name,n=6){
 }
 function npSimHTML(name){
   const sims=simFoods(name||'');
-  if(!sims.length) return `<div class="sec-f" style="padding:0 20px 18px">${name&&name.trim()?'Aucun aliment proche trouvé : essaie un autre mot (ex. « champignons », « jambon »), ou l’estimation en ligne.':'Tape le nom du produit pour voir des aliments similaires et remplir les valeurs en un appui.'}</div>`;
-  return sec('Aliments similaires',sims.map(o=>cell({a:'npFill',attrs:`data-k="${o.k}"`,title:`<span class="ct sm">${esc(o.f.n)}</span>`,sub:`${o.f.v[0]} kcal · P ${o.f.v[1]} · G ${o.f.v[2]} · L ${o.f.v[3]} (pour 100 g)`,right:`<span class="tint" style="font-weight:600;font-size:15px">Utiliser</span>`})).join(''),'Un appui remplit les valeurs ci-dessus avec la moyenne de cet aliment.');
+  if(!sims.length) return `<div class="sec-f" style="padding:0 20px 18px">${name&&name.trim()?'Aucun aliment proche trouvé : essaie un autre mot (ex. « champignons », « jambon »), ou l’estimation en ligne.':'Tape le nom du produit : les aliments similaires apparaîtront ici pour remplir les valeurs en un appui.'}</div>`;
+  return sec('Aliments similaires',sims.map(o=>cell({a:'npFill',attrs:`data-k="${o.k}"`,title:`<span class="ct sm">${esc(o.f.n)}</span>`,sub:`${o.f.v[0]} kcal · P ${o.f.v[1]} · G ${o.f.v[2]} · L ${o.f.v[3]} (pour 100 g)`,right:`<span class="tint" style="font-weight:600;font-size:15px">Utiliser</span>`})).join(''),'« Utiliser » remplit les valeurs ci-dessous avec la moyenne de cet aliment.');
 }
 function nfForm(){
   const L=LG;
   return `<div class="card alert" style="margin-bottom:14px">${ic('warn')}<div><b style="font-size:15px">Code ${esc(L.nf.code)} absent de la base</b><div class="sub" style="font-size:13px;line-height:18px">Ajoute-le une fois : recopie l’étiquette, ou pars d’un aliment similaire si les valeurs ne sont pas indiquées. Le prochain scan le retrouvera.</div></div></div>
-   ${sec('Nouveau produit (valeurs pour 100 g)',`<label class="cell"><span class="cbody"><span class="ct">Nom</span></span><input class="cin" id="npN" value="${esc(L.nf.n)}" placeholder="Champignons de Paris…" style="width:180px;text-align:right" autocomplete="off"></label>
-    <label class="cell"><span class="cbody"><span class="ct">Calories</span></span><input class="cin" id="npK" type="number" inputmode="decimal" placeholder="0"><span class="unit">kcal</span></label>
+   ${sec('Nom du produit',`<label class="cell"><span class="cbody"><span class="ct">Nom</span></span><input class="cin" id="npN" value="${esc(L.nf.n)}" placeholder="Champignons de Paris…" style="width:190px;text-align:right" autocomplete="off"></label>`)}
+   <div id="npSim">${npSimHTML(L.nf.n)}</div>
+   ${sec('Valeurs pour 100 g',`<label class="cell"><span class="cbody"><span class="ct">Calories</span></span><input class="cin" id="npK" type="number" inputmode="decimal" placeholder="0"><span class="unit">kcal</span></label>
     <label class="cell"><span class="cbody"><span class="ct">Protéines</span></span><input class="cin" id="npP" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
     <label class="cell"><span class="cbody"><span class="ct">Glucides</span></span><input class="cin" id="npC" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
     <label class="cell"><span class="cbody"><span class="ct">Lipides</span></span><input class="cin" id="npF" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
-    <label class="cell"><span class="cbody"><span class="ct">Portion habituelle</span><span class="cs">optionnel</span></span><input class="cin" id="npS" type="number" inputmode="decimal" placeholder="100"><span class="unit">g</span></label>`,'<span id="npNote">Recopie le tableau « pour 100 g » de l’emballage, ou utilise une suggestion ci-dessous.</span>')}
-   <div id="npSim">${npSimHTML(L.nf.n)}</div>
+    <label class="cell"><span class="cbody"><span class="ct">Portion habituelle</span><span class="cs">optionnel</span></span><input class="cin" id="npS" type="number" inputmode="decimal" placeholder="100"><span class="unit">g</span></label>`,'<span id="npNote">Recopie le tableau « pour 100 g » de l’emballage, ou touche « Utiliser » sur un aliment similaire au-dessus.</span>')}
    <div class="btnwrap"><button class="btn" data-a="npSave">Enregistrer dans Mes produits</button><button class="btn gray" data-a="npOnline">${ic('search')} Estimer d’après des produits similaires en ligne</button><button class="btn gray" data-a="nfCancel">Annuler</button></div>`;
 }
 function npSetVals(v,note){[['npK',v[0]],['npP',v[1]],['npC',v[2]],['npF',v[3]]].forEach(([id,x])=>{const e=$('#'+id); if(e) e.value=String(Math.round(x*10)/10)}); const n=$('#npNote'); if(n) n.textContent=note; haptic()}
