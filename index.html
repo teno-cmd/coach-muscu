@@ -40,6 +40,7 @@ a{color:var(--tint);text-decoration:none}
 svg.ic{width:1em;height:1em;display:inline-block;vertical-align:-.14em;flex:none;overflow:visible}
 .tint{color:var(--tint)}.center{text-align:center}.mt{margin-top:10px}
 .pad{padding:0 16px 20px}
+.istep{width:28px;height:28px;border-radius:50%;background:var(--tint);color:#000;font-weight:700;font-size:15px;display:grid;place-items:center;flex:none}.istep+.cbody svg{width:18px;height:18px;vertical-align:-3px;color:var(--blue)}
 
 /* ---- Barre de navigation (large title qui se replie) ---- */
 .nav{position:fixed;top:0;left:0;right:0;z-index:30;padding-top:var(--st);border-bottom:.5px solid transparent;transition:background-color .25s,border-color .25s}
@@ -1466,7 +1467,7 @@ function vHome(){
      +cell({icon:ic('target'),bg:'var(--purple)',title:'Isolation',sub:'Élévations, curls, extensions, leg curl',value:'90 s',vcls:'t'})
      +cell({icon:ic('flame'),bg:'var(--teal)',title:'Abdos',value:'60 s',vcls:'t'})
      +cell({a:'science',icon:ic('book'),bg:'var(--indigo)',title:'Ce que dit la science',chev:true}),null,true)}
-   ${standalone?'':sec('',cell({icon:ic('share'),bg:'var(--blue)',title:'Ajouter à l’écran d’accueil',sub:'Dans Safari : Partager, puis « Sur l’écran d’accueil ». L’app s’ouvrira en plein écran.'}))}`);
+   ${standalone?'':sec('',cell({a:'installGuide',icon:ic('down'),bg:'var(--blue)',title:'Installer l’appli sur ton écran d’accueil',sub:'Tuto adapté à ton téléphone : plein écran et utilisable hors connexion.',chev:true}))}`);
 }
 function sciSheet(){
   openSheet(`<div class="pad"><div class="hero-ic">${ic('book')}</div><h2 class="t2 center">Pourquoi ces temps de repos ?</h2></div>
@@ -1577,6 +1578,7 @@ function vProfile(){
      +cell({a:'testSound',icon:ic('play',1),bg:'var(--blue)',title:'Tester le son',chev:true})
      +cell({icon:ic('fork',1),bg:'var(--green)',title:'Mode OMAD',sub:'Un repas par jour : réglages dans l’onglet Nutrition',right:`<button class="sw ${NUT().omad?'on':''}" data-a="omadToggle" aria-label="Mode OMAD"></button>`}),
      'Sur iOS 17 et plus, le son est joué même en mode silencieux. Monte le volume avant ta séance.')}
+    ${isStandalone()?'':sec('Application',cell({a:'installGuide',icon:ic('down'),bg:'var(--blue)',title:'Installer sur l’écran d’accueil',chev:true}))}
     ${sec('Données',
       cell({a:'export',icon:ic('share'),bg:'var(--blue)',title:'Exporter une sauvegarde',chev:true})
      +cell({a:'import',icon:ic('down'),bg:'var(--green)',title:'Importer une sauvegarde',chev:true})
@@ -2611,6 +2613,8 @@ document.addEventListener('click',ev=>{
     case 'resume': unlockAudio(); keepAwake(); go('workout','up'); break;
     case 'exinfo': exInfo(el.dataset.id, el.dataset.d!=null?+el.dataset.d:null); break;
     case 'closeSheet': closeSheet(); break;
+    case 'installGuide': installGuide(); break;
+    case 'installNow': { if(!_bip) break; const ev=_bip; _bip=null; ev.prompt(); ev.userChoice.then(r=>{ if(r&&r.outcome==='accepted') closeSheet(); else if($('#instBody')) $('#instBody').innerHTML=installBody() }).catch(()=>{}); break; }
     case 'science': sciSheet(); break;
     case 'change': changeSheet(); break;
     case 'placeOpen': placeSheet(); break;
@@ -2744,6 +2748,61 @@ function setupPWA(){ /* icônes et manifeste déclarés en dur dans <head> (fich
   if(document.readyState==='complete') reg(); else window.addEventListener('load',reg);
 }
 
+/* ---------- Tuto d'installation (détecte l'appareil et le navigateur) ---------- */
+const INST_KEY='coachmuscu_install_seen';
+let _bip=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();_bip=e;if($('#instBody'))$('#instBody').innerHTML=installBody()});
+window.addEventListener('appinstalled',()=>{_bip=null;if($('#instBody'))closeSheet();toast('Coach Muscu est installée')});
+const isStandalone=()=>!!(window.navigator.standalone||matchMedia('(display-mode: standalone)').matches);
+function detectEnv(){
+  const ua=navigator.userAgent||'';
+  const ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const android=/Android/i.test(ua);
+  const inApp=/FBAN|FBAV|Instagram|TikTok|Snapchat|Line\/|LinkedInApp|Twitter/i.test(ua);
+  let br='other';
+  if(ios) br=/CriOS/.test(ua)?'chrome':/FxiOS/.test(ua)?'firefox':/EdgiOS/.test(ua)?'edge':/OPiOS|OPT\//.test(ua)?'opera':'safari';
+  else if(/SamsungBrowser/.test(ua)) br='samsung';
+  else if(/Firefox/.test(ua)) br='firefox';
+  else if(/Edg\//.test(ua)) br='edge';
+  else if(/OPR\//.test(ua)) br='opera';
+  else if(/Chrome\//.test(ua)) br='chrome';
+  else if(/Safari\//.test(ua)) br='safari';
+  return {os:ios?'ios':android?'android':'desktop', br, inApp};
+}
+const BR_N={safari:'Safari',chrome:'Chrome',firefox:'Firefox',edge:'Edge',opera:'Opera',samsung:'Samsung Internet',other:'ton navigateur'};
+function installSteps(env){
+  const {os,br,inApp}=env;
+  if(inApp) return {lead:'Tu as ouvert le site depuis une autre appli (Instagram, TikTok…). Son navigateur intégré ne permet pas l’installation.',
+    steps:[`Appuie sur le menu <b>⋯</b> en haut ou en bas de l’écran.`,`Choisis <b>« Ouvrir dans ${os==='ios'?'Safari':'le navigateur'} »</b>.`,'Le tuto s’affichera à nouveau, avec les étapes pour ce navigateur.']};
+  if(os==='ios'){
+    if(br==='safari') return {steps:[`Appuie sur le bouton <b>Partager</b> ${ic('share')} en bas de l’écran (en haut sur iPad).`,'Fais défiler et choisis <b>« Sur l’écran d’accueil »</b>.','Appuie sur <b>Ajouter</b> en haut à droite.']};
+    return {steps:[`Appuie sur le bouton <b>Partager</b> ${ic('share')} ${br==='chrome'?'dans la barre d’adresse, en haut à droite':'du navigateur'}.`,'Choisis <b>« Ajouter à l’écran d’accueil »</b> (fais défiler si besoin).','Appuie sur <b>Ajouter</b>.'],
+      foot:'Option absente ? Elle nécessite iOS 16.4 ou plus. Sinon, ouvre le site dans Safari.'};
+  }
+  if(os==='android'){
+    if(br==='samsung') return {steps:['Appuie sur le menu <b>☰</b> en bas à droite.','Choisis <b>« Ajouter la page à »</b>.','Choisis <b>« Écran d’accueil »</b>, puis <b>Ajouter</b>.'],
+      foot:'Une icône de téléchargement peut aussi apparaître directement dans la barre d’adresse : un appui suffit.'};
+    if(br==='firefox') return {steps:['Appuie sur le menu <b>⋮</b>.','Choisis <b>« Installer »</b> ou <b>« Ajouter à l’écran d’accueil »</b>.','Confirme avec <b>Ajouter</b>.']};
+    return {steps:['Appuie sur le menu <b>⋮</b> en haut à droite.','Choisis <b>« Installer l’application »</b> ou <b>« Ajouter à l’écran d’accueil »</b>.','Confirme avec <b>Installer</b>.']};
+  }
+  if(br==='chrome'||br==='edge'||br==='opera') return {steps:['Clique sur l’icône d’installation <b>⊕</b> à droite de la barre d’adresse.',`Ou passe par le menu <b>${br==='edge'?'⋯':'⋮'}</b> → <b>« Installer Coach Muscu »</b>${br==='chrome'?' (parfois dans « Caster, enregistrer et partager »)':''}.`,'Confirme avec <b>Installer</b>.']};
+  if(br==='safari') return {steps:['Dans la barre de menus, ouvre <b>Fichier</b>.','Choisis <b>« Ajouter au Dock »</b> (macOS Sonoma ou plus).','Confirme avec <b>Ajouter</b>.']};
+  return {lead:`${BR_N[br]} sur ordinateur ne permet pas d’installer les applis web.`,steps:['Ouvre le site dans <b>Chrome</b> ou <b>Edge</b> pour l’installer sur ton ordinateur.','Ou, mieux, ouvre-le sur ton téléphone : l’appli est pensée pour être utilisée à la salle.']};
+}
+function installBody(){
+  const env=detectEnv(), dev={ios:/iPad/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)?'iPad':'iPhone',android:'Android',desktop:'ordinateur'}[env.os];
+  if(isStandalone()) return `<div class="pad"><div class="hero-ic">${ic('checkCircle',1)}</div><h2 class="t2 center">L’appli est déjà installée</h2><div class="sub center mt">Tu l’utilises depuis ton écran d’accueil. 💪</div></div>`;
+  const T=installSteps(env);
+  const quick=_bip&&!env.inApp?`<div class="btnwrap"><button class="btn" data-a="installNow">${ic('down')} Installer en un appui</button></div><div class="sec-f" style="padding:0 20px 10px;margin-top:-22px">Ou suis les étapes ci-dessous.</div>`:'';
+  return `<div class="pad"><div class="hero-ic">${ic('down')}</div><h2 class="t2 center">Installe Coach Muscu</h2>
+     <div class="sub center mt">${T.lead||(env.os==='desktop'?'L’appli s’ouvrira dans sa propre fenêtre, comme un vrai logiciel, même sans connexion.':'L’appli s’ouvrira en plein écran depuis ton écran d’accueil, comme une vraie appli, même sans connexion.')}</div></div>
+   ${quick}
+   ${sec(`${dev} · ${env.inApp?'navigateur intégré':BR_N[env.br]}`,T.steps.map((t,i)=>`<div class="cell top"><span class="istep">${i+1}</span><span class="cbody"><span class="ct sm">${t}</span></span></div>`).join(''),T.foot||null)}
+   <div class="btnwrap"><button class="btn gray" data-a="closeSheet">Plus tard</button></div>`;
+}
+function installGuide(){ try{localStorage.setItem(INST_KEY,'1')}catch(e){} openSheet(`<div id="instBody">${installBody()}</div>`,{title:'Installation'}) }
+function maybeInstallGuide(){ if(isStandalone()) return; let seen=null; try{seen=localStorage.getItem(INST_KEY)}catch(e){} if(!seen) setTimeout(()=>{ if(!$('#sheet').classList.contains('open')&&!S.active) installGuide() },1200) }
+
 /* ---------- Démarrage ---------- */
 if(S.profile && !S.program){S.program=generate(S.profile);save()}
 if(S.profile && !S.profile.prio){S.profile.prio=[]}
@@ -2752,6 +2811,7 @@ if(S.profile && !S.profile.chain){Object.assign(S.profile,{chain:'onair',noMach:
 if(S.program) ensureCycle();
 setupPWA();
 render();
+maybeInstallGuide();
 setInterval(tick,250);
 requestAnimationFrame(animLoop);
 if(S.active) keepAwake();
