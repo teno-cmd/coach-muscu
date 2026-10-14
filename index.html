@@ -435,6 +435,18 @@ button[disabled]{pointer-events:none}
    COACH MUSCU — PWA mono-fichier
    Données : localStorage (clé KEY). Aucune dépendance externe.
    ========================================================= */
+
+/* =========================================================
+   MONÉTISATION — à remplir une fois tes comptes créés
+   - amazonTag : ton identifiant Amazon Partenaires (ex. 'coachmuscu-21').
+     Vide = les liens marchent quand même, mais sans commission.
+   - support : ton lien Ko-fi / Buy Me a Coffee / Tipeee.
+     Vide = le bouton « Soutenir l'appli » reste caché.
+   ========================================================= */
+const MONEY={
+  amazonTag:'',
+  support:{url:'',label:'Ko-fi'},
+};
 const KEY = 'coachmuscu_v1';
 
 /* ---------- Groupes musculaires ---------- */
@@ -1578,6 +1590,8 @@ function vProfile(){
      +cell({a:'testSound',icon:ic('play',1),bg:'var(--blue)',title:'Tester le son',chev:true})
      +cell({icon:ic('fork',1),bg:'var(--green)',title:'Mode OMAD',sub:'Un repas par jour : réglages dans l’onglet Nutrition',right:`<button class="sw ${NUT().omad?'on':''}" data-a="omadToggle" aria-label="Mode OMAD"></button>`}),
      'Sur iOS 17 et plus, le son est joué même en mode silencieux. Monte le volume avant ta séance.')}
+    ${p.place==='home'?eqShopSec():''}
+    ${supportSec()}
     ${isStandalone()?'':sec('Application',cell({a:'installGuide',icon:ic('down'),bg:'var(--blue)',title:'Installer sur l’écran d’accueil',chev:true}))}
     ${sec('Données',
       cell({a:'export',icon:ic('share'),bg:'var(--blue)',title:'Exporter une sauvegarde',chev:true})
@@ -2092,6 +2106,19 @@ function vRxList(){
   return sec('',list.map(r=>{const m=rxMac(r);return cell({a:'rx',attrs:`data-id="${r.id}"`,icon:`<span class="emo">${r.em}</span>`,bg:'var(--bg3)',title:esc(r.n),
     sub:`${r0(m.kcal)} kcal · <b class="mP">P ${r0(m.p)}</b> · <b class="mG">G ${r0(m.c)}</b> · <b class="mL">L ${r0(m.f)}</b><br>${esc(r.when)}${r.g.includes(g)?` · <span class="tint">adapté à ta ${GOALS[g].n.toLowerCase()}</span>`:''}`,chev:true})}).join(''));
 }
+/* ---------- Où l'acheter (liens d'affiliation) ---------- */
+const SHOP_ING={whey:'whey protéine',caseine:'caséine micellaire',bcac:'beurre de cacahuète 100 %',avoine:'flocons d’avoine',galette_riz:'galettes de riz soufflé'};
+const SHOP_EQ={halt:'haltères réglables',kettlebell:'kettlebell',elastique:'élastiques de résistance musculation',traction:'barre de traction porte',banc:'banc de musculation inclinable',barre:'barre et disques musculation'};
+function shopURL(q,shop){const e=encodeURIComponent(q);
+  return shop==='decathlon'?`https://www.decathlon.fr/search?Ntt=${e}`:`https://www.amazon.fr/s?k=${e}${MONEY.amazonTag?'&tag='+encodeURIComponent(MONEY.amazonTag):''}`}
+const shopLink=(title,sub,url)=>`<a class="cell" href="${url}" target="_blank" rel="noopener sponsored"><span class="cbody"><span class="ct sm">${title}</span>${sub?`<span class="cs">${sub}</span>`:''}</span>${CH}</a>`;
+const shopNote=()=>MONEY.amazonTag?'Liens affiliés : en tant que Partenaire Amazon, Coach Muscu réalise un bénéfice sur les achats remplissant les conditions requises, sans surcoût pour toi. Ça aide à garder l’appli gratuite.':'Liens de recherche vers des boutiques en ligne, à titre indicatif.';
+function rxShopSec(r){const ids=[...new Set(r.ing.map(([id])=>id))].filter(id=>SHOP_ING[id]);
+  return ids.length?sec('Où l’acheter',ids.map(id=>shopLink(esc(ING[id].n),'Voir sur Amazon',shopURL(SHOP_ING[id]))).join(''),shopNote()):''}
+function eqShopSec(){return sec('Équiper ma salle à la maison',Object.entries(SHOP_EQ).map(([k,q])=>shopLink(`${EQUIP[k].em} ${esc(EQUIP[k].n)}`,'Voir sur Amazon',shopURL(q))
+  +`<a class="cell" href="${shopURL(q,'decathlon')}" target="_blank" rel="noopener" style="--inset:16px;min-height:36px;padding-top:4px"><span class="cbody"><span class="cs">Voir chez Decathlon</span></span>${CH}</a>`).join(''),shopNote())}
+const supportSec=()=>MONEY.support.url?sec('Soutenir Coach Muscu',`<a class="cell" href="${MONEY.support.url}" target="_blank" rel="noopener"><span class="cico" style="background:var(--pink)">❤️</span><span class="cbody"><span class="ct">Offrir un café au développeur</span><span class="cs">Don ponctuel via ${esc(MONEY.support.label)}, sans abonnement</span></span>${CH}</a>`,'L’appli reste 100 % gratuite. Les dons aident à payer son développement.'):'';
+
 function rxSheet(id,k){rxId=id;rxK=k||1;openSheet(`<div id="rxBody">${rxBody()}</div>`,{title:'Recette'})}
 function rxBody(){
   const r=rxOf(rxId), m=rxMac(r,rxK), M=macros(S.profile);
@@ -2100,6 +2127,7 @@ function rxBody(){
      <div class="sec-f">Soit ${r0(m.p/M.prot*100)} % de tes protéines et ${r0(m.kcal/M.kcal*100)} % de tes calories du jour.</div></div>
    ${sec('Portion',`<div class="cell"><span class="cbody"><span class="ct">Quantités</span><span class="cs">Ajuste selon ta faim ou tes objectifs</span></span><div class="stp" style="width:136px;flex:none"><button data-a="rxK" data-d="-1" aria-label="Moins">${ic('minus')}</button><span>×${fmtNum(rxK)}</span><button data-a="rxK" data-d="1" aria-label="Plus">${ic('plus')}</button></div></div>`)}
    ${sec('Ingrédients',r.ing.map(([id,q])=>cell({title:ING[id].n,value:fmtQty(q*rxK,ING[id])})).join(''))}
+   ${rxShopSec(r)}
    ${sec('Quand la consommer',cell({icon:ic('clock',1),bg:'var(--blue)',title:esc(r.when),sub:esc(r.whenWhy)}))}
    ${sec('Intérêt nutritionnel',r.why.map(t=>`<div class="cell top" style="--inset:52px"><span class="mk g">${ic('checkCircle',1)}</span><span class="cbody"><span class="ct sm">${esc(t)}</span></span></div>`).join(''))}
    ${sec('Préparation',r.steps.map((t,i)=>`<div class="cell top" style="--inset:54px"><span class="stepn">${i+1}</span><span class="cbody"><span class="ct sm">${esc(t)}</span></span></div>`).join(''),'Macros calculées à partir des tables Ciqual (ANSES) et USDA. Les produits du commerce (whey, galettes, tortillas…) varient : vérifie tes étiquettes.')}
