@@ -363,6 +363,28 @@ svg.fig .pd{fill:#48484a}
 .fchips span{font:600 12px var(--round);padding:4px 9px;border-radius:7px;background:var(--fill4)}
 .fchips b{color:var(--tint)}
 
+/* ---- Journal ---- */
+.jcard{padding:12px 16px 14px}
+.jnav{display:flex;align-items:center;justify-content:space-between;margin:-4px -6px 6px}
+.jnav b{font-size:15px;font-weight:600}
+.jsum{display:flex;align-items:center;gap:18px;margin-bottom:12px}
+.jring{width:118px;height:118px;flex:none}
+.jr1{font:700 24px var(--round);fill:#fff}.jr2{font:500 9.5px var(--font);fill:rgba(235,235,245,.6)}
+.jstats{flex:1;display:grid;gap:8px}
+.jstats span{display:block;font-size:12px;color:var(--label2)}
+.jstats b{font:600 20px/1.15 var(--round)}
+.mrow{display:grid;grid-template-columns:72px 1fr 82px;gap:10px;align-items:center;padding:4px 0}
+.mrow .ml{font-size:13px;color:var(--label2)}
+.mrow .mv{font-size:12px;color:var(--label2);text-align:right;font-variant-numeric:tabular-nums}.mrow .mv b{color:var(--label);font-weight:600}
+.mhead{display:flex;justify-content:space-between;padding:12px 16px 4px;font-size:13px;font-weight:600;color:var(--label2);text-transform:uppercase;letter-spacing:-.003em}
+.mhead+.cell::before{display:none}
+.srch{display:flex;align-items:center;gap:8px;margin:0 16px 14px;padding:0 6px 0 10px;background:var(--fill3);border-radius:10px;height:38px;color:var(--label2)}
+.srch input{flex:1;background:none;border:0;outline:0;font-size:17px;color:var(--label);min-width:0;-webkit-appearance:none;appearance:none}
+.srch input::placeholder{color:var(--label3)}
+.wchart{width:100%;height:auto;display:block}
+.wlbl{font:600 10px var(--font);fill:rgba(235,235,245,.45)}.wlbl.on{fill:var(--tint)}
+button[disabled]{pointer-events:none}
+
 /* ---- Transitions ---- */
 @keyframes fadeIn{from{opacity:0}}
 @keyframes pushIn{from{opacity:0;transform:translateX(24%)}}
@@ -1244,6 +1266,7 @@ const SYM = {
  clock:f=>f?`<circle ${FL} cx="12" cy="12" r="10"/><path d="M12 6.8v5.4l3.6 2.1" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round"/>`:`<circle ${ST} cx="12" cy="12" r="9.2"/><path ${ST} d="M12 6.8v5.4l3.6 2.1"/>`,
  person:f=>f?`<circle ${FL} cx="12" cy="12" r="10.2"/><circle fill="#000" fill-opacity=".85" cx="12" cy="9.8" r="3.5"/><path fill="#000" fill-opacity=".85" d="M5.6 18.7c1.6-2.5 3.8-3.7 6.4-3.7s4.8 1.2 6.4 3.7A9.9 9.9 0 0 1 12 22a9.9 9.9 0 0 1-6.4-3.3z"/>`:`<circle ${ST} cx="12" cy="12" r="9.4"/><circle ${ST} cx="12" cy="9.8" r="3.3"/><path ${ST} d="M6 18.5c1.5-2.2 3.6-3.3 6-3.3s4.5 1.1 6 3.3"/>`,
  chev:`<path ${ST} stroke-width="2.6" d="m9 4.5 7.5 7.5L9 19.5"/>`,
+ search:`<circle ${ST} stroke-width="2.2" cx="10.5" cy="10.5" r="6.5"/><path ${ST} stroke-width="2.4" d="m15.5 15.5 5 5"/>`,
  fork:f=>`<g ${ST} stroke-width="${f?2.3:1.8}"><path d="M6.5 3v7.5M4.3 3v5.2a2.2 2.2 0 0 0 4.4 0V3M6.5 10.5V21"/><path d="M17.5 21V3c-2 1.1-3.3 3.5-3.3 7v2.6h3.3"/></g>`,
  forward:`<path ${FL} d="M2.8 6.2v11.6c0 .7.8 1.1 1.4.7L12 13v4.8c0 .7.8 1.1 1.4.7l8.2-5.8a.9.9 0 0 0 0-1.4l-8.2-5.8c-.6-.4-1.4 0-1.4.7V11L4.2 5.5c-.6-.4-1.4 0-1.4.7z"/>`,
  warn:`<path ${FL} d="M10.3 3.6a2 2 0 0 1 3.4 0l8 13.9a2 2 0 0 1-1.7 3H4a2 2 0 0 1-1.7-3z"/><path d="M12 9v4.6" stroke="#000" stroke-width="2.2" stroke-linecap="round"/><circle fill="#000" cx="12" cy="16.9" r="1.25"/>`,
@@ -1401,7 +1424,7 @@ function vHome(){
      <div class="tmbs">${d.ex.map(x=>`<div class="tmb">${figSVG(x.id)}</div>`).join('')}</div>
      <div class="pills"><span class="pill">${ic((d.place||p.place)==='home'?'house':'dumbbell',1)} ${(d.place||p.place)==='home'?'Maison':'Salle'}</span><span class="pill">${ic('timer')} ≈ ${estDuration(d)} min</span><span class="pill">${d.ex.length} exercices</span><span class="pill">${nSets} séries</span></div>
      <div class="btnrow"><button class="btn" data-a="start" data-d="${nd}">${ic('play',1)} Commencer</button><button class="btn gray ico" data-a="fiche" data-d="${nd}" aria-label="Fiche de séance">${ic('list')}</button><button class="btn gray ico" data-a="change" aria-label="Changer de séance">${ic('swap')}</button></div></div>
-   ${sec('Nutrition',cell({a:'nav',attrs:'data-v="nutrition"',icon:ic('fork',1),bg:'var(--green)',title:NUT().omad?`OMAD · repas à ${fmtH(NUT().meal)}`:`${N.kcal.toLocaleString('fr-FR')} kcal · ${N.prot} g de protéines`,sub:NUT().omad?`${N.kcal.toLocaleString('fr-FR')} kcal et ${N.prot} g de protéines en un repas${NUT().formula==='shake'?' + 1 shaker':''}`:'Objectifs du jour, timing autour de la séance et idées de repas',chev:true}),null,true)}
+   ${sec('Nutrition',cell({a:'nav',attrs:'data-v="nutrition"',icon:ic('fork',1),bg:'var(--green)',title:`${Math.round(logTot(todayK()).kcal).toLocaleString('fr-FR')} / ${N.kcal.toLocaleString('fr-FR')} kcal aujourd’hui`,sub:(NUT().omad?`OMAD · repas à ${fmtH(NUT().meal)} · `:'')+`Protéines : ${Math.round(logTot(todayK()).p)} / ${N.prot} g · touche pour ajouter un repas`,chev:true}),null,true)}
    ${sec('Temps de repos',
       cell({icon:ic('bolt'),bg:'var(--orange)',title:'Polyarticulaires lourds',sub:'Squat, développé couché, rowing barre, presse',value:'3 min',vcls:'t'})
      +cell({icon:ic('dumbbell',1),bg:'var(--blue)',title:'Polyarticulaires guidés',sub:'Machines convergentes, haltères, tirages',value:'2 min',vcls:'t'})
@@ -2002,6 +2025,9 @@ function vNutrition(){
   const omad=NUT().omad;
   return page('Nutrition',{sub:`${GOALS[p.goal].n} · ${omad?'mode OMAD, un repas par jour':'objectifs quotidiens'}`},
   `${sec('',cell({icon:ic('clock',1),bg:omad?'var(--tint)':'var(--gray)',title:'Mode OMAD',sub:'Un seul repas par jour (jeûne intermittent)',right:`<button class="sw ${omad?'on':''}" data-a="omadToggle" aria-label="Mode OMAD"></button>`}))}
+   <div class="sec-h big" style="padding:4px 20px 10px">Compteur de calories</div>
+   ${vJournal()}
+   <div class="sec-h big" style="padding:4px 20px 10px">Tes objectifs</div>
    <div class="card">
      <div class="cap">Objectif du jour</div>
      <div class="bignum">${M.kcal.toLocaleString('fr-FR')}<small>kcal</small></div>
@@ -2039,7 +2065,8 @@ function rxBody(){
    ${sec('Ingrédients',r.ing.map(([id,q])=>cell({title:ING[id].n,value:fmtQty(q*rxK,ING[id])})).join(''))}
    ${sec('Quand la consommer',cell({icon:ic('clock',1),bg:'var(--blue)',title:esc(r.when),sub:esc(r.whenWhy)}))}
    ${sec('Intérêt nutritionnel',r.why.map(t=>`<div class="cell top" style="--inset:52px"><span class="mk g">${ic('checkCircle',1)}</span><span class="cbody"><span class="ct sm">${esc(t)}</span></span></div>`).join(''))}
-   ${sec('Préparation',r.steps.map((t,i)=>`<div class="cell top" style="--inset:54px"><span class="stepn">${i+1}</span><span class="cbody"><span class="ct sm">${esc(t)}</span></span></div>`).join(''),'Macros calculées à partir des tables Ciqual (ANSES) et USDA. Les produits du commerce (whey, galettes, tortillas…) varient : vérifie tes étiquettes.')}`;
+   ${sec('Préparation',r.steps.map((t,i)=>`<div class="cell top" style="--inset:54px"><span class="stepn">${i+1}</span><span class="cbody"><span class="ct sm">${esc(t)}</span></span></div>`).join(''),'Macros calculées à partir des tables Ciqual (ANSES) et USDA. Les produits du commerce (whey, galettes, tortillas…) varient : vérifie tes étiquettes.')}
+   <div class="btnwrap"><button class="btn" data-a="rxLog">${ic('plus')} Ajouter au journal (${r0(m.kcal)} kcal)</button></div>`;
 }
 function nutriSrcSheet(){
   const L=(t,s,u)=>`<a class="cell" href="${u}" target="_blank" rel="noopener"><span class="cbody"><span class="ct sm">${t}</span><span class="cs">${s}</span></span>${CH}</a>`;
@@ -2206,6 +2233,147 @@ function omadTipsSheet(t){
    ${t==='avoid'?sec('Sources',['Stote et al., 2007 — Am J Clin Nutr|https://pubmed.ncbi.nlm.nih.gov/17413096/','Trommelen et al., 2023 — Cell Reports Medicine|https://pmc.ncbi.nlm.nih.gov/articles/PMC10772463/','Moro et al., 2016 — J Transl Med|https://pubmed.ncbi.nlm.nih.gov/27737674/','Tinsley et al., 2016 — Eur J Sport Sci|https://www.gwern.net/doc/longevity/fasting/2016-tinsley.pdf'].map(x=>{const [a,u]=x.split('|');return `<a class="cell" href="${u}" target="_blank" rel="noopener"><span class="cbody"><span class="ct sm">${a}</span></span>${CH}</a>`}).join('')):''}`,{title:'OMAD'});
 }
 
+/* =========================================================
+   JOURNAL ALIMENTAIRE (compteur de calories)
+   Valeurs moyennes pour 100 g (ou 100 ml) : tables Ciqual (ANSES) / USDA.
+   Produits du commerce : Open Food Facts (base collaborative, étiquettes).
+   ========================================================= */
+const FOOD_EXTRA={
+ pates_cuites:{n:'Pâtes cuites',v:[150,5.5,30,.9]},riz_complet:{n:'Riz complet cuit',v:[125,2.8,25,1]},semoule:{n:'Semoule de couscous cuite',v:[115,4,23,.5]},
+ pdt:{n:'Pommes de terre cuites à l’eau',v:[80,2,17,.1]},frites:{n:'Frites',v:[290,3.5,35,14]},pain_mie:{n:'Pain de mie',v:[275,8.5,49,4],pc:[25,'tranche']},
+ cereales:{n:'Céréales du petit-déjeuner (type pétales de maïs)',v:[375,7,83,1]},muesli:{n:'Muesli',v:[370,9.5,63,6]},croissant:{n:'Croissant',v:[406,8,44,21],pc:[55,'croissant']},
+ pain_choco:{n:'Pain au chocolat',v:[420,7.5,46,22],pc:[65,'pain au chocolat']},confiture:{n:'Confiture',v:[250,.4,60,.1]},pate_tartiner:{n:'Pâte à tartiner chocolat-noisette',v:[540,6,57,31]},
+ sucre:{n:'Sucre',v:[400,0,100,0]},beurre:{n:'Beurre',v:[745,.7,.6,82]},emmental:{n:'Emmental',v:[375,28,0,29]},camembert:{n:'Camembert',v:[270,20,.5,21]},
+ mozzarella:{n:'Mozzarella',v:[250,18,1,19]},feta:{n:'Feta',v:[270,16,1,22]},yaourt:{n:'Yaourt nature',v:[52,4.3,5.3,1.2],pc:[125,'pot']},
+ lait_entier:{n:'Lait entier',v:[65,3.3,4.8,3.6],u:'ml'},lait_ecreme:{n:'Lait écrémé',v:[35,3.4,4.9,.1],u:'ml'},creme:{n:'Crème fraîche 30 %',v:[290,2.3,3,30]},
+ hache15:{n:'Steak haché 15 % MG (cuit)',v:[250,26,0,16],pc:[100,'steak']},hache5:{n:'Steak haché 5 % MG (cuit)',v:[150,27,0,5],pc:[100,'steak']},
+ entrecote:{n:'Entrecôte grillée',v:[200,26,0,11]},porc:{n:'Filet mignon de porc cuit',v:[160,29,0,5]},lardons:{n:'Lardons',v:[270,15,0,23]},
+ dinde:{n:'Escalope de dinde cuite',v:[130,29,0,1.5]},cuisse_poulet:{n:'Cuisse de poulet rôtie (avec peau)',v:[230,25,0,14.5]},
+ cabillaud:{n:'Cabillaud cuit',v:[91,21,0,.8]},crevettes:{n:'Crevettes cuites',v:[99,22,0,1.2]},sardines:{n:'Sardines à l’huile égouttées',v:[208,24,0,12.5]},
+ blanc_oeuf:{n:'Blanc d’œuf',v:[48,10.5,.7,.2]},haricots_rouges:{n:'Haricots rouges cuits',v:[115,8,16,.6]},
+ orange:{n:'Orange',v:[47,.9,9.4,.2],pc:[150,'orange']},kiwi:{n:'Kiwi',v:[60,1,11,.6],pc:[75,'kiwi']},raisin:{n:'Raisin',v:[70,.7,16,.2]},
+ fraise:{n:'Fraises',v:[33,.7,6,.3]},ananas:{n:'Ananas',v:[52,.5,11.5,.2]},compote:{n:'Compote sans sucres ajoutés',v:[60,.3,13,.1],pc:[100,'pot']},
+ carotte:{n:'Carottes cuites',v:[25,.8,5,.2]},courgette:{n:'Courgettes cuites',v:[18,1.2,2.2,.3]},salade:{n:'Salade verte',v:[15,1.3,1.5,.2]},
+ champignons:{n:'Champignons cuits',v:[25,2.5,1.5,.5]},noix:{n:'Noix (cerneaux)',v:[700,15,7,65]},cajou:{n:'Noix de cajou',v:[594,18,27,46]},
+ choco_noir:{n:'Chocolat noir 70 %',v:[550,8,33,42],pc:[10,'carré']},choco_lait:{n:'Chocolat au lait',v:[540,7,55,32],pc:[10,'carré']},
+ biscuits:{n:'Biscuits secs (type petit-beurre)',v:[434,7.5,74,12],pc:[8,'biscuit']},chips:{n:'Chips',v:[530,6,50,34]},
+ pizza:{n:'Pizza jambon-fromage',v:[233,11,27,9],pc:[125,'part']},burger:{n:'Cheeseburger (fast-food)',v:[255,13,28,10.5],pc:[120,'burger']},
+ kebab:{n:'Sandwich kebab',v:[230,11,22,11],pc:[350,'kebab']},jambon_beurre:{n:'Sandwich jambon-beurre',v:[258,11,32,9.5],pc:[200,'sandwich']},
+ quiche:{n:'Quiche lorraine',v:[265,9,19,17],pc:[150,'part']},lasagnes:{n:'Lasagnes bolognaise',v:[147,8,13,7],pc:[300,'portion']},
+ soda:{n:'Soda sucré',v:[42,0,10.5,0],u:'ml',pc:[330,'canette']},jus_orange:{n:'Jus d’orange',v:[45,.7,10,.1],u:'ml',pc:[200,'verre']},
+ biere:{n:'Bière 5 %',v:[40,.4,3,0],u:'ml',pc:[250,'demi']},vin:{n:'Vin rouge',v:[68,.1,.2,0],u:'ml',pc:[125,'verre']},
+ ketchup:{n:'Ketchup',v:[110,1.2,25,.2]},mayo:{n:'Mayonnaise',v:[700,1.2,1.5,76]},houmous:{n:'Houmous',v:[289,7.5,13,23]},
+ barre_prot:{n:'Barre protéinée (moyenne)',v:[380,33,35,12],pc:[60,'barre']},
+};
+const FOODS={...ING,...FOOD_EXTRA};
+const MEALS_STD=[['pdj','Petit-déjeuner','☀️'],['dej','Déjeuner','🍽️'],['col','Collation','🍎'],['din','Dîner','🌙']];
+const MEALS_OMAD=[['repas','Repas unique','🍽️'],['shake','Shaker / collation','🥤']];
+const mealsList=()=>NUT().omad?MEALS_OMAD:MEALS_STD;
+let LOGDAY=null, LG=null, _offLast=0;
+const dKey=t=>{const z=new Date(t);return z.getFullYear()+'-'+String(z.getMonth()+1).padStart(2,'0')+'-'+String(z.getDate()).padStart(2,'0')};
+const todayK=()=>dKey(Date.now());
+const curDay=()=>LOGDAY||todayK();
+const norm=s=>String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[’']/g,' ');
+function logOf(k){return (S.log&&S.log[k])||[]}
+function logTot(k){const o={kcal:0,p:0,c:0,f:0};logOf(k).forEach(e=>{o.kcal+=e.kcal;o.p+=e.p;o.c+=e.c;o.f+=e.f});return o}
+function defMeal(){ if(NUT().omad) return 'repas'; const d=new Date(), h=d.getHours()+d.getMinutes()/60; return h<10.5?'pdj':h<15?'dej':h<18.5?'col':'din'}
+function addLog(e,k){ k=k||curDay(); if(!S.log) S.log={}; (S.log[k]=S.log[k]||[]).push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:Date.now(),...e});
+  const keys=Object.keys(S.log).sort(); while(keys.length>120) delete S.log[keys.shift()]; save(); }
+function dayLabel(k){const t=todayK(), y=dKey(Date.now()-dayMs); if(k===t) return 'Aujourd’hui'; if(k===y) return 'Hier';
+  const [Y,M,D]=k.split('-').map(Number); return new Date(Y,M-1,D).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}).replace(/^./,c=>c.toUpperCase())}
+function shiftDay(k,n){const [Y,M,D]=k.split('-').map(Number); return dKey(new Date(Y,M-1,D+n).getTime())}
+const r1=x=>Math.round(x);
+function macroRow(lbl,v,t,col){const pct=Math.min(1,t?v/t:0);return `<div class="mrow"><span class="ml">${lbl}</span><span class="vbar"><i style="width:${pct*100}%;background:${v>t*1.1?'var(--orange)':col}"></i></span><span class="mv"><b>${r1(v)}</b> / ${t} g</span></div>`}
+function weekChart(target){
+  const days=[...Array(7)].map((_,i)=>shiftDay(todayK(),i-6)), vals=days.map(k=>logTot(k).kcal), mx=Math.max(target*1.3,...vals), H=70, W=300, bw=26, gap=(W-bw*7)/6;
+  const ty=H-target/mx*H;
+  return `<svg viewBox="0 0 ${W} ${H+18}" class="wchart" aria-label="Calories des 7 derniers jours">
+    ${days.map((k,i)=>{const v=vals[i], h=Math.max(v?3:0,v/mx*H), x=i*(bw+gap); const over=v>target*1.1, under=v>0&&v<target*.9;
+      return `<rect x="${x}" y="${H-h}" width="${bw}" height="${h}" rx="5" fill="${!v?'rgba(118,118,128,.24)':over?'var(--orange)':under?'rgba(200,255,46,.45)':'var(--tint)'}"/><text x="${x+bw/2}" y="${H+14}" text-anchor="middle" class="wlbl${k===curDay()?' on':''}">${['D','L','M','M','J','V','S'][new Date(Date.now()-(6-i)*dayMs).getDay()]}</text>`}).join('')}
+    <line x1="0" y1="${ty}" x2="${W}" y2="${ty}" stroke="rgba(235,235,245,.5)" stroke-width="1.2" stroke-dasharray="4 4"/></svg>`;
+}
+function vJournal(){
+  const k=curDay(), T=logTot(k), M=macros(S.profile), rem=M.kcal-T.kcal, entries=logOf(k), ML=mealsList(), keys=ML.map(m=>m[0]);
+  const C=2*Math.PI*44, pct=Math.min(1,T.kcal/M.kcal);
+  const groups=ML.map(([mk,lbl,em])=>{const es=entries.filter(e=>e.meal===mk), tk=es.reduce((a,e)=>a+e.kcal,0);
+    return `<div class="mhead"><span>${em} ${lbl}</span><span>${tk?r1(tk)+' kcal':''}</span></div>${es.map(e=>cell({a:'logItem',attrs:`data-id="${e.id}"`,title:`<span class="ct sm">${esc(e.name)}</span>`,sub:`${esc(e.qty||'')}${e.qty?' · ':''}P ${r1(e.p)} · G ${r1(e.c)} · L ${r1(e.f)}`,value:r1(e.kcal)+' kcal'})).join('')}
+      ${cell({a:'logAdd',attrs:`data-m="${mk}"`,icon:ic('plus'),bg:'var(--tint);color:#000',title:'<span class="tint">Ajouter</span>'})}`}).join('');
+  const other=entries.filter(e=>!keys.includes(e.meal));
+  return `<div class="card jcard">
+     <div class="jnav"><button class="tbtn" data-a="logDay" data-d="-1" aria-label="Jour précédent">${ic('chevL')}</button><b>${dayLabel(k)}</b><button class="tbtn" data-a="logDay" data-d="1" ${k===todayK()?'disabled style="opacity:.25"':''} aria-label="Jour suivant">${ic('chev')}</button></div>
+     <div class="jsum">
+       <svg viewBox="0 0 110 110" class="jring"><circle cx="55" cy="55" r="44" fill="none" stroke="rgba(200,255,46,.16)" stroke-width="12"/>${T.kcal>0?`<circle cx="55" cy="55" r="44" fill="none" stroke="${T.kcal>M.kcal*1.1?'var(--orange)':'var(--tint)'}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C*(1-pct)).toFixed(1)}" transform="rotate(-90 55 55)"/>`:''}
+         <text x="55" y="53" text-anchor="middle" class="jr1">${r1(Math.abs(rem)).toLocaleString('fr-FR')}</text><text x="55" y="70" text-anchor="middle" class="jr2">${rem>=0?'kcal restantes':'kcal en trop'}</text></svg>
+       <div class="jstats"><div><span>Objectif</span><b>${M.kcal.toLocaleString('fr-FR')}</b></div><div><span>Consommé</span><b class="tint">${r1(T.kcal).toLocaleString('fr-FR')}</b></div><div><span>${rem>=0?'Restant':'Dépassé'}</span><b style="color:${rem>=0?'var(--label)':'var(--orange)'}">${r1(Math.abs(rem)).toLocaleString('fr-FR')}</b></div></div>
+     </div>
+     ${macroRow('Protéines',T.p,M.prot,'var(--P)')}${macroRow('Glucides',T.c,M.carb,'var(--G)')}${macroRow('Lipides',T.f,M.fat,'var(--L)')}
+   </div>
+   <section class="sec"><div class="grp">${groups}${other.length?`<div class="mhead"><span>Autres</span></div>${other.map(e=>cell({a:'logItem',attrs:`data-id="${e.id}"`,title:esc(e.name),value:r1(e.kcal)+' kcal'})).join('')}`:''}</div>
+     <div class="sec-f">Touche un aliment pour le supprimer ou l’ajouter à nouveau.</div></section>
+   ${sec('7 derniers jours',`<div class="cell" style="display:block">${weekChart(M.kcal)}<div class="cs center">Pointillés : ton objectif de ${M.kcal.toLocaleString('fr-FR')} kcal</div></div>`,null,true)}`;
+}
+/* ----- Feuille d'ajout ----- */
+function logSheet(meal){ LG={meal:meal||defMeal(),tab:'food',q:'',sel:null,off:null,offErr:null,offLoading:false,offQ:''}; openSheet(`<div id="lgBody">${lgBody()}</div>`,{title:'Ajouter'}); setTimeout(()=>{const q=$('#fdQ');if(q)q.focus()},350) }
+function lgRefresh(){const b=$('#lgBody'); if(b) b.innerHTML=lgBody()}
+function recents(){const out=[],seen=new Set();Object.keys(S.log||{}).sort().reverse().forEach(k=>logOf(k).slice().reverse().forEach(e=>{const key=e.name+'|'+(e.qty||'');if(!seen.has(key)&&out.length<8){seen.add(key);out.push(e)}}));return out}
+function fdList(){
+  const q=norm(LG.q).trim();
+  if(!q){const rc=recents(); return rc.length?sec('Récents',rc.map((e,i)=>cell({a:'recentAdd',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(e.name)}</span>`,sub:esc(e.qty||''),value:r1(e.kcal)+' kcal',right:`<span class="tint" style="font-size:22px">${ic('plus')}</span>`})).join(''),'Un appui l’ajoute directement au repas choisi.'):`<div class="empty" style="padding:30px 30px">Tape le nom d’un aliment : riz, poulet, pomme, pizza…</div>`}
+  const toks=q.split(/\s+/), res=Object.entries(FOODS).filter(([k,f])=>toks.every(t=>norm(f.n).includes(t))).slice(0,40);
+  return res.length?sec('',res.map(([k,f])=>cell({a:'fdPick',attrs:`data-k="${k}"`,title:`<span class="ct sm">${esc(f.n)}</span>`,sub:`${f.v[0]} kcal / 100 ${f.u||'g'} · P ${f.v[1]} · G ${f.v[2]} · L ${f.v[3]}`,chev:true})).join('')):`<div class="empty" style="padding:30px">Aucun aliment trouvé. Essaie l’onglet « Produits » ou « Rapide ».</div>`;
+}
+function selMac(){
+  const s=LG.sel; if(s.kind==='rx'){const r=rxOf(s.key);return rxMac(r,s.k)}
+  const v=s.v, g=s.unit==='pc'?s.qty*s.pc[0]:s.qty, f=g/100; return {kcal:v[0]*f,p:v[1]*f,c:v[2]*f,f:v[3]*f,g};
+}
+function lgBody(){
+  const L=LG, ML=mealsList();
+  if(!ML.some(m=>m[0]===L.meal)) L.meal=ML[0][0];
+  const mealSeg=`<div class="segwrap" style="margin-bottom:12px">${seg('lgMeal',ML.map(m=>[m[0],m[1].split(' ')[0]]),L.meal,'lgMeal')}</div>`;
+  if(L.sel){
+    const s=L.sel, m=selMac();
+    const qtyTxt=s.kind==='rx'?`×${fmtNum(s.k)}`:s.unit==='pc'?`${fmtNum(s.qty)} ${s.pc[1]}${s.qty>1?'s':''}`:`${s.qty} ${s.u||'g'}`;
+    return `<div class="pad"><button class="tbtn" data-a="lgBack">${ic('chevL')}Retour</button><div class="t2" style="margin-top:6px">${esc(s.name)}</div>${s.kind!=='rx'?`<div class="sub">${s.v[0]} kcal pour 100 ${s.u||'g'}</div>`:''}</div>
+     ${mealSeg}
+     <div class="sec"><div class="grp stats4"><div><b>${r1(m.kcal)}</b><span>kcal</span></div><div><b class="mP">${r1(m.p)} g</b><span>Prot.</span></div><div><b class="mG">${r1(m.c)} g</b><span>Gluc.</span></div><div><b class="mL">${r1(m.f)} g</b><span>Lip.</span></div></div></div>
+     ${sec('Quantité',`<div class="cell"><span class="cbody"><span class="ct">${qtyTxt}</span>${s.unit==='pc'?`<span class="cs">≈ ${r1(m.g)} ${s.u||'g'}</span>`:''}</span><div class="stp" style="width:136px;flex:none"><button data-a="lgQty" data-d="-1" aria-label="Moins">${ic('minus')}</button><span>${s.kind==='rx'?'×'+fmtNum(s.k):s.unit==='pc'?fmtNum(s.qty):s.qty}</span><button data-a="lgQty" data-d="1" aria-label="Plus">${ic('plus')}</button></div></div>
+       ${s.kind!=='rx'&&s.pc?`<div class="cell stack">${seg('lgUnit',[['g',s.u==='ml'?'Millilitres':'Grammes'],['pc','En '+s.pc[1]+'s']],s.unit,'lgUnit')}</div>`:''}
+       ${s.kind!=='rx'&&s.unit!=='pc'?`<div class="cell"><span class="cbody"><span class="ct sm">Quantité exacte</span></span><input class="cin" id="lgExact" type="number" inputmode="decimal" value="${s.qty}" style="width:90px"><span class="unit">${s.u||'g'}</span></div>`:''}`)}
+     <div class="btnwrap"><button class="btn" data-a="lgConfirm">${ic('plus')} Ajouter ${r1(m.kcal)} kcal</button></div>`;
+  }
+  const tabs=`<div class="segwrap" style="margin-bottom:12px">${seg('lgTab',[['food','Aliments'],['rx','Recettes'],['off','Produits'],['quick','Rapide']],L.tab,'lgTab')}</div>`;
+  let body='';
+  if(L.tab==='food') body=`<div class="srch">${ic('search')}<input id="fdQ" type="search" placeholder="Rechercher un aliment" value="${esc(L.q)}" autocomplete="off"></div><div id="fdList">${fdList()}</div>`;
+  else if(L.tab==='rx'){const list=[...RX,...Object.values(RX_DYN)]; body=sec('Recettes et shakers de l’app',list.map(r=>{const m=rxMac(r);return cell({a:'rxPick',attrs:`data-id="${r.id}"`,icon:`<span class="emo">${r.em}</span>`,bg:'var(--bg4)',title:`<span class="ct sm">${esc(r.n)}</span>`,sub:`${r1(m.kcal)} kcal · P ${r1(m.p)} · G ${r1(m.c)} · L ${r1(m.f)}`,chev:true})}).join(''))}
+  else if(L.tab==='off') body=`<div class="srch">${ic('search')}<input id="offQ" type="search" placeholder="Nom du produit, marque ou code-barres" value="${esc(L.offQ)}" autocomplete="off"><button class="tbtn b" data-a="offSearch" ${L.offLoading?'disabled':''}>${L.offLoading?'…':'Chercher'}</button></div>
+     ${L.offErr?`<div class="empty" style="padding:24px">${esc(L.offErr)}</div>`:''}
+     ${L.offLoading?`<div class="empty" style="padding:24px">Recherche en cours…</div>`:L.off?(L.off.length?sec('Résultats Open Food Facts',L.off.map((o,i)=>cell({a:'offPick',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(o.n)}</span>`,sub:`${r1(o.v[0])} kcal / 100 g · P ${fmtNum(+o.v[1].toFixed(1))} · G ${fmtNum(+o.v[2].toFixed(1))} · L ${fmtNum(+o.v[3].toFixed(1))}`,chev:true})).join(''),'Valeurs déclarées sur l’emballage (base collaborative Open Food Facts).'):`<div class="empty" style="padding:24px">Aucun produit trouvé.</div>`):`<div class="sec-f" style="padding:0 20px">Produits du commerce (Open Food Facts). Lance une recherche par nom ou tape les chiffres du code-barres. Nécessite une connexion.</div>`}`;
+  else body=sec('Saisie rapide',`<label class="cell"><span class="cbody"><span class="ct">Nom</span></span><input class="cin" id="qkN" placeholder="Restaurant, plat…" style="width:170px;text-align:right"></label>
+      <label class="cell"><span class="cbody"><span class="ct">Calories</span></span><input class="cin" id="qkK" type="number" inputmode="numeric" placeholder="0"><span class="unit">kcal</span></label>
+      <label class="cell"><span class="cbody"><span class="ct">Protéines</span><span class="cs">optionnel</span></span><input class="cin" id="qkP" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
+      <label class="cell"><span class="cbody"><span class="ct">Glucides</span><span class="cs">optionnel</span></span><input class="cin" id="qkC" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
+      <label class="cell"><span class="cbody"><span class="ct">Lipides</span><span class="cs">optionnel</span></span><input class="cin" id="qkF" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>`,'Pratique au restaurant : si tu ne connais que les calories, laisse les macros vides.')+`<div class="btnwrap"><button class="btn" data-a="quickAdd">${ic('plus')} Ajouter</button></div>`;
+  return mealSeg+tabs+body;
+}
+async function offSearch(){
+  const q=(($('#offQ')||{}).value||'').trim(); LG.offQ=q; if(!q) return;
+  const wait=6000-(Date.now()-_offLast); if(wait>0){toast(`Patiente ${Math.ceil(wait/1000)} s entre deux recherches`,'timer');return}
+  _offLast=Date.now(); LG.offLoading=true; LG.offErr=null; lgRefresh();
+  try{
+    const F='product_name,product_name_fr,brands,nutriments,serving_quantity,code'; let prods=[];
+    if(/^\d{8,14}$/.test(q)){const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${q}.json?fields=${F}`);const j=await r.json();if(j.product)prods=[j.product]}
+    else{const r=await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=24&lc=fr&cc=fr&fields=${F}`);const j=await r.json();prods=j.products||[]}
+    LG.off=prods.filter(p=>(p.product_name_fr||p.product_name)&&p.nutriments&&p.nutriments['energy-kcal_100g']!=null).map(p=>({n:(p.product_name_fr||p.product_name)+(p.brands?' · '+p.brands.split(',')[0]:''),
+      v:[+p.nutriments['energy-kcal_100g']||0,+p.nutriments.proteins_100g||0,+p.nutriments.carbohydrates_100g||0,+p.nutriments.fat_100g||0],sv:+p.serving_quantity||0}));
+  }catch(e){LG.offErr='Recherche impossible pour le moment (hors ligne ou service indisponible). Utilise les aliments ou la saisie rapide.'}
+  LG.offLoading=false; if(LG) lgRefresh();
+}
+function lgConfirm(){
+  const s=LG.sel, m=selMac(); const qty=s.kind==='rx'?`portion ×${fmtNum(s.k)}`:s.unit==='pc'?`${fmtNum(s.qty)} ${s.pc[1]}${s.qty>1?'s':''}`:`${s.qty} ${s.u||'g'}`;
+  addLog({meal:LG.meal,name:s.name,qty,kcal:m.kcal,p:m.p,c:m.c,f:m.f,src:s.kind});
+  const k=r1(m.kcal); closeSheet(); render(); toast(`+${k} kcal ajoutées`);
+}
+
 /* ---------- Actions ---------- */
 document.addEventListener('click',ev=>{
   const el=ev.target.closest('[data-a]'); if(!el) return;
@@ -2263,6 +2431,29 @@ document.addEventListener('click',ev=>{
     case 'rx': rxSheet(el.dataset.id, el.dataset.k?+el.dataset.k:1); break;
     case 'rxK': { rxK=Math.min(3,Math.max(.5,Math.round((rxK+(+el.dataset.d)*.25)*4)/4)); const b=$('#rxBody'); if(b) b.innerHTML=rxBody(); haptic(); break; }
     case 'nutriSrc': nutriSrcSheet(); break;
+    case 'logDay': { const n=shiftDay(curDay(),+el.dataset.d); LOGDAY=n>=todayK()?null:n; haptic(); render(); break; }
+    case 'logAdd': logSheet(el.dataset.m); break;
+    case 'logItem': { const k=curDay(), e=logOf(k).find(x=>x.id===el.dataset.id); if(!e) break;
+      actionSheet({title:esc(e.name),msg:`${r1(e.kcal)} kcal · P ${r1(e.p)} g · G ${r1(e.c)} g · L ${r1(e.f)} g`,actions:[
+        {label:'Ajouter à nouveau',fn:()=>{const {id,t,...c}=e; addLog(c,k); render(); toast(`+${r1(e.kcal)} kcal ajoutées`)}},
+        {label:'Supprimer',style:'destructive',fn:()=>{S.log[k]=logOf(k).filter(x=>x.id!==e.id); save(); render(); toast('Supprimé','trash')}}]}); break; }
+    case 'recentAdd': { const e=recents()[+el.dataset.i]; if(!e) break; const {id,t,meal,...c}=e; addLog({...c,meal:LG.meal}); render(); haptic(); toast(`+${r1(e.kcal)} kcal · ${e.name}`); break; }
+    case 'fdPick': { const f=FOODS[el.dataset.k]; LG.sel={kind:'food',name:f.n,v:f.v,u:f.u,pc:f.pc,unit:f.pc?'pc':'g',qty:f.pc?1:100}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
+    case 'rxPick': { const r=rxOf(el.dataset.id); LG.sel={kind:'rx',key:r.id,name:r.n,k:1}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
+    case 'offPick': { const o=LG.off[+el.dataset.i]; LG.sel={kind:'off',name:o.n,v:o.v,qty:o.sv||100,unit:'g'}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
+    case 'offSearch': offSearch(); break;
+    case 'lgBack': LG.sel=null; lgRefresh(); break;
+    case 'lgMeal': LG.meal=el.dataset.val; segUpdate(el); haptic(); break;
+    case 'lgTab': { const q=$('#fdQ'); if(q) LG.q=q.value; const o=$('#offQ'); if(o) LG.offQ=o.value; LG.tab=el.dataset.val; segUpdate(el); haptic(); setTimeout(lgRefresh,200); break; }
+    case 'lgUnit': { const s=LG.sel; if(s.unit===el.dataset.val) break; if(el.dataset.val==='pc'){s.unit='pc';s.qty=Math.max(.5,Math.round(s.qty/s.pc[0]*2)/2)} else {s.unit='g';s.qty=Math.round(s.qty*s.pc[0])} segUpdate(el); setTimeout(lgRefresh,200); break; }
+    case 'lgQty': { const s=LG.sel, d=+el.dataset.d;
+      if(s.kind==='rx') s.k=Math.min(4,Math.max(.25,s.k+d*.25)); else if(s.unit==='pc') s.qty=Math.max(.5,s.qty+d*.5); else { const st=s.qty<50||(s.qty===50&&d<0)?5:10; s.qty=Math.max(5,s.qty+d*st) }
+      haptic(); lgRefresh(); break; }
+    case 'lgConfirm': lgConfirm(); break;
+    case 'quickAdd': { const v=id=>parseFloat(String(($('#'+id)||{}).value||'').replace(',','.'))||0, kcal=v('qkK'), p=v('qkP'), c=v('qkC'), f=v('qkF');
+      const k2=kcal||(p*4+c*4+f*9); if(!k2) return toastErr('Indique au moins les calories');
+      addLog({meal:LG.meal,name:(($('#qkN')||{}).value||'').trim()||'Saisie rapide',qty:'',kcal:k2,p,c,f,src:'quick'}); closeSheet(); render(); toast(`+${r1(k2)} kcal ajoutées`); break; }
+    case 'rxLog': { const r=rxOf(rxId), m=rxMac(r,rxK); addLog({meal:defMeal(),name:r.n,qty:`portion ×${fmtNum(rxK)}`,kcal:m.kcal,p:m.p,c:m.c,f:m.f,src:'rx'},todayK()); closeSheet(); render(); toast(`+${r1(m.kcal)} kcal ajoutées au journal`); break; }
     case 'omadToggle': {
       const n=NUT();
       if(n.omad){ n.omad=false; save(); render(); toast('Mode OMAD désactivé'); break; }
@@ -2312,7 +2503,10 @@ document.addEventListener('click',ev=>{
     case 'reset': actionSheet({title:'Tout réinitialiser ?',msg:'Profil, programme et historique seront effacés de ce téléphone.',actions:[{label:'Effacer toutes les données',style:'destructive',fn:()=>{localStorage.removeItem(KEY);S=defState();F=null;obStep=0;go('onboard')}}]}); break;
   }
 });
+document.addEventListener('input',ev=>{ if(ev.target.id==='fdQ'&&LG){ LG.q=ev.target.value; const l=$('#fdList'); if(l) l.innerHTML=fdList(); } });
+document.addEventListener('keydown',ev=>{ if(ev.key==='Enter'&&ev.target.id==='offQ'){ ev.preventDefault(); ev.target.blur(); offSearch(); } });
 document.addEventListener('change',ev=>{
+  if(ev.target.id==='lgExact'&&LG&&LG.sel){ const v=parseFloat(String(ev.target.value).replace(',','.')); if(v>0){LG.sel.qty=Math.round(v);lgRefresh()} return; }
   if(ev.target.id==='phFile'){ const f=ev.target.files[0], k=ev.target.dataset.k; if(!f||!k) return;
     compressImg(f).then(url=>{ phAll()[k]=url; if(phSave()){ toast('Photo enregistrée'); figMode='mach'; if(_exCtx&&$('#sheet').classList.contains('open')) exInfo(_exCtx[0],_exCtx[1]); render(); } }).catch(()=>toastErr('Image illisible')); return; }
   if(ev.target.id!=='importFile') return;
