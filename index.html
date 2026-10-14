@@ -248,6 +248,7 @@ svg.fig .pd{fill:#48484a}
 .stp button{width:36px;height:40px;display:grid;place-items:center;color:var(--label);font-size:15px;flex:none;transition:opacity .15s}
 .stp button:active{opacity:.3}
 .stp span{flex:1;text-align:center;font:600 17px var(--round);white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:0}
+.stp .stpin{flex:1;min-width:0;width:100%;height:40px;border:0;background:transparent;color:var(--label);text-align:center;font:600 17px var(--round);font-variant-numeric:tabular-nums;padding:0;border-radius:8px;-webkit-appearance:none;appearance:none}.stp .stpin:focus{outline:2px solid var(--tint);outline-offset:-2px}
 .stp span small{font:500 12px var(--font);color:var(--label2);margin-left:2px}
 .setrow.done .stp{background:transparent}
 .setrow.done .stp button{opacity:.25}
@@ -2439,6 +2440,15 @@ function selMac(){
   const s=LG.sel; if(s.kind==='rx'){const r=rxOf(s.key);return rxMac(r,s.k)}
   const v=s.v, g=s.unit==='pc'?s.qty*s.pc[0]:s.qty, f=g/100; return {kcal:v[0]*f,p:v[1]*f,c:v[2]*f,f:v[3]*f,g};
 }
+const lgStatsHTML=m=>`<div><b>${r1(m.kcal)}</b><span>kcal</span></div><div><b class="mP">${r1(m.p)} g</b><span>Prot.</span></div><div><b class="mG">${r1(m.c)} g</b><span>Gluc.</span></div><div><b class="mL">${r1(m.f)} g</b><span>Lip.</span></div>`;
+function lgLive(){
+  const s=LG&&LG.sel; if(!s||s.kind==='rx') return; const m=selMac();
+  const st=$('#lgStats'); if(st) st.innerHTML=lgStatsHTML(m);
+  const t=$('#lgQtyTxt'); if(t) t.textContent=s.unit==='pc'?`${fmtNum(s.qty)} ${s.pc[1]}${s.qty>1?'s':''}`:`${s.qty} ${s.u||'g'}`;
+  const g=$('#lgQtyG'); if(g) g.textContent=`≈ ${r1(m.g)} ${s.u||'g'}`;
+  const b=$('#lgAdd'); if(b) b.innerHTML=`${ic('plus')} Ajouter ${r1(m.kcal)} kcal`;
+}
+function lgQtyParse(v){ const x=parseFloat(String(v).replace(',','.')); return x>0&&x<100000?x:null }
 function lgBody(){
   const L=LG, ML=mealsList();
   if(!ML.some(m=>m[0]===L.meal)) L.meal=ML[0][0];
@@ -2448,11 +2458,11 @@ function lgBody(){
     const qtyTxt=s.kind==='rx'?`×${fmtNum(s.k)}`:s.unit==='pc'?`${fmtNum(s.qty)} ${s.pc[1]}${s.qty>1?'s':''}`:`${s.qty} ${s.u||'g'}`;
     return `<div class="pad"><button class="tbtn" data-a="lgBack">${ic('chevL')}Retour</button><div class="t2" style="margin-top:6px">${esc(s.name)}</div>${s.kind!=='rx'?`<div class="sub">${s.v[0]} kcal pour 100 ${s.u||'g'}</div>`:''}</div>
      ${mealSeg}
-     <div class="sec"><div class="grp stats4"><div><b>${r1(m.kcal)}</b><span>kcal</span></div><div><b class="mP">${r1(m.p)} g</b><span>Prot.</span></div><div><b class="mG">${r1(m.c)} g</b><span>Gluc.</span></div><div><b class="mL">${r1(m.f)} g</b><span>Lip.</span></div></div></div>
-     ${sec('Quantité',`<div class="cell"><span class="cbody"><span class="ct">${qtyTxt}</span>${s.unit==='pc'?`<span class="cs">≈ ${r1(m.g)} ${s.u||'g'}</span>`:''}</span><div class="stp" style="width:136px;flex:none"><button data-a="lgQty" data-d="-1" aria-label="Moins">${ic('minus')}</button><span>${s.kind==='rx'?'×'+fmtNum(s.k):s.unit==='pc'?fmtNum(s.qty):s.qty}</span><button data-a="lgQty" data-d="1" aria-label="Plus">${ic('plus')}</button></div></div>
+     <div class="sec"><div class="grp stats4" id="lgStats">${lgStatsHTML(m)}</div></div>
+     ${sec('Quantité',`<div class="cell"><span class="cbody"><span class="ct" id="lgQtyTxt">${qtyTxt}</span>${s.unit==='pc'?`<span class="cs" id="lgQtyG">≈ ${r1(m.g)} ${s.u||'g'}</span>`:''}</span><div class="stp" style="width:136px;flex:none"><button data-a="lgQty" data-d="-1" aria-label="Moins">${ic('minus')}</button>${s.kind==='rx'?`<span>×${fmtNum(s.k)}</span>`:`<input id="lgQtyIn" class="stpin" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" value="${s.unit==='pc'?fmtNum(s.qty):s.qty}" aria-label="Quantité ${s.unit==='pc'?'en '+s.pc[1]+'s':'en '+(s.u||'g')}">`}<button data-a="lgQty" data-d="1" aria-label="Plus">${ic('plus')}</button></div></div>
        ${s.kind!=='rx'&&s.pc?`<div class="cell stack">${seg('lgUnit',[['g',s.u==='ml'?'Millilitres':'Grammes'],['pc','En '+s.pc[1]+'s']],s.unit,'lgUnit')}</div>`:''}
-       ${s.kind!=='rx'&&s.unit!=='pc'?`<div class="cell"><span class="cbody"><span class="ct sm">Quantité exacte</span></span><input class="cin" id="lgExact" type="number" inputmode="decimal" value="${s.qty}" style="width:90px"><span class="unit">${s.u||'g'}</span></div>`:''}`)}
-     <div class="btnwrap"><button class="btn" data-a="lgConfirm">${ic('plus')} Ajouter ${r1(m.kcal)} kcal</button></div>`;
+       `)}
+     <div class="btnwrap"><button class="btn" data-a="lgConfirm" id="lgAdd">${ic('plus')} Ajouter ${r1(m.kcal)} kcal</button></div>`;
   }
   const tabs=`<div class="segwrap" style="margin-bottom:12px">${seg('lgTab',[['food','Aliments & produits'],['rx','Recettes'],['quick','Rapide']],L.tab==='off'?'food':L.tab,'lgTab')}</div>`;
   let body='';
@@ -2755,12 +2765,16 @@ document.addEventListener('click',ev=>{
 });
 document.addEventListener('input',ev=>{
   if(ev.target.id==='fdQ'&&LG){ LG.q=ev.target.value; if(LG.nf){LG.nf=null; LG.offErr=null; const b=$('#lgBody'); if(b){b.innerHTML=lgBody(); const q=$('#fdQ'); if(q){q.focus(); q.setSelectionRange(q.value.length,q.value.length)}} return} fdRefresh(); }
+  if(ev.target.id==='lgQtyIn'&&LG&&LG.sel){ const x=lgQtyParse(ev.target.value); if(x!=null){ LG.sel.qty=LG.sel.unit==='pc'?Math.round(x*100)/100:Math.round(x*10)/10; lgLive() } return; }
   if(ev.target.id==='npN'){ const z=$('#npSim'); if(z) z.innerHTML=npSimHTML(ev.target.value); }
 });
-document.addEventListener('keydown',ev=>{ if(ev.key==='Enter'&&ev.target.id==='fdQ'&&LG){ ev.preventDefault(); ev.target.blur(); LG.q=ev.target.value; offSearch(); } });
+/* Au toucher, tout le chiffre est sélectionné : la frappe le remplace (le relâchement du doigt annule parfois la sélection, d'où le second select au clic) */
+document.addEventListener('focusin',ev=>{ const e=ev.target; if(e.id!=='lgQtyIn') return; e.dataset.fresh='1'; setTimeout(()=>{try{e.select()}catch(_){}},0) });
+document.addEventListener('click',ev=>{ const e=ev.target; if(e.id!=='lgQtyIn'||!e.dataset.fresh) return; delete e.dataset.fresh; try{e.select()}catch(_){} },true);
+document.addEventListener('keydown',ev=>{ if(ev.key==='Enter'&&ev.target.id==='lgQtyIn'){ ev.preventDefault(); ev.target.blur(); return; } if(ev.key==='Enter'&&ev.target.id==='fdQ'&&LG){ ev.preventDefault(); ev.target.blur(); LG.q=ev.target.value; offSearch(); } });
 document.addEventListener('change',ev=>{
   if(ev.target.id==='scanFile'){ const f=ev.target.files[0]; if(f) scanPhotoFile(f); return; }
-  if(ev.target.id==='lgExact'&&LG&&LG.sel){ const v=parseFloat(String(ev.target.value).replace(',','.')); if(v>0){LG.sel.qty=Math.round(v);lgRefresh()} return; }
+  if(ev.target.id==='lgQtyIn'&&LG&&LG.sel){ const s0=LG.sel, x=lgQtyParse(ev.target.value); if(x!=null) s0.qty=s0.unit==='pc'?Math.max(.25,Math.round(x*4)/4):Math.max(1,Math.round(x)); lgRefresh(); return; }
   if(ev.target.id==='phFile'){ const f=ev.target.files[0], k=ev.target.dataset.k; if(!f||!k) return;
     compressImg(f).then(url=>{ phAll()[k]=url; if(phSave()){ toast('Photo enregistrée'); figMode='mach'; if(_exCtx&&$('#sheet').classList.contains('open')) exInfo(_exCtx[0],_exCtx[1]); render(); } }).catch(()=>toastErr('Image illisible')); return; }
   if(ev.target.id!=='importFile') return;
