@@ -396,6 +396,7 @@ button[disabled]{pointer-events:none}
 .scan-top .tbtn{color:#fff;font-weight:600}
 .scan-bot{position:absolute;left:16px;right:16px;bottom:calc(var(--sb) + 20px);display:grid;gap:12px}
 .scan-msg{text-align:center;color:#fff;font-size:15px;font-weight:600;text-shadow:0 1px 6px rgba(0,0,0,.8);line-height:1.35}
+.scan-tip{text-align:center;color:rgba(255,255,255,.75);font-size:13px;margin-top:-6px;text-shadow:0 1px 6px rgba(0,0,0,.8)}
 .scanbtn{width:34px;height:34px;display:grid;place-items:center;color:var(--tint);font-size:22px;flex:none}
 
 /* ---- Transitions ---- */
@@ -2266,7 +2267,7 @@ const FOOD_EXTRA={
  cabillaud:{n:'Cabillaud cuit',v:[91,21,0,.8]},crevettes:{n:'Crevettes cuites',v:[99,22,0,1.2]},sardines:{n:'Sardines à l’huile égouttées',v:[208,24,0,12.5]},
  blanc_oeuf:{n:'Blanc d’œuf',v:[48,10.5,.7,.2]},haricots_rouges:{n:'Haricots rouges cuits',v:[115,8,16,.6]},
  orange:{n:'Orange',v:[47,.9,9.4,.2],pc:[150,'orange']},kiwi:{n:'Kiwi',v:[60,1,11,.6],pc:[75,'kiwi']},raisin:{n:'Raisin',v:[70,.7,16,.2]},
- fraise:{n:'Fraises',v:[33,.7,6,.3]},ananas:{n:'Ananas',v:[52,.5,11.5,.2]},compote:{n:'Compote sans sucres ajoutés',v:[60,.3,13,.1],pc:[100,'pot']},
+ fraise:{n:'Fraises',v:[33,.7,6,.3]},framboise:{n:'Framboises',v:[49,1.4,5,.3]},peche:{n:'Pêche',v:[40,.8,8.6,.2],pc:[150,'pêche']},poire:{n:'Poire',v:[55,.4,12,.2],pc:[160,'poire']},mangue:{n:'Mangue',v:[63,.6,13.6,.3]},ananas:{n:'Ananas',v:[52,.5,11.5,.2]},compote:{n:'Compote sans sucres ajoutés',v:[60,.3,13,.1],pc:[100,'pot']},
  carotte:{n:'Carottes cuites',v:[25,.8,5,.2]},courgette:{n:'Courgettes cuites',v:[18,1.2,2.2,.3]},salade:{n:'Salade verte',v:[15,1.3,1.5,.2]},
  champignons:{n:'Champignons cuits',v:[25,2.5,1.5,.5]},noix:{n:'Noix (cerneaux)',v:[700,15,7,65]},cajou:{n:'Noix de cajou',v:[594,18,27,46]},
  choco_noir:{n:'Chocolat noir 70 %',v:[550,8,33,42],pc:[10,'carré']},choco_lait:{n:'Chocolat au lait',v:[540,7,55,32],pc:[10,'carré']},
@@ -2333,7 +2334,7 @@ function recents(){const out=[],seen=new Set();Object.keys(S.log||{}).sort().rev
 function fdList(){
   const q=norm(LG.q).trim();
   if(!q){const rc=recents(); return rc.length?sec('Récents',rc.map((e,i)=>cell({a:'recentAdd',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(e.name)}</span>`,sub:esc(e.qty||''),value:r1(e.kcal)+' kcal',right:`<span class="tint" style="font-size:22px">${ic('plus')}</span>`})).join(''),'Un appui l’ajoute directement au repas choisi.'):`<div class="empty" style="padding:30px 30px">Tape le nom d’un aliment : riz, poulet, pomme, pizza…</div>`}
-  const toks=q.split(/\s+/), res=Object.entries(FOODS).filter(([k,f])=>toks.every(t=>norm(f.n).includes(t))).slice(0,40);
+  const toks=q.split(/\s+/), all={...FOODS,...Object.fromEntries(Object.entries(S.myprod||{}).map(([c,o])=>['mp_'+c,{n:o.n+' (mon produit)',v:o.v,sv:o.sv}]))}, res=Object.entries(all).filter(([k,f])=>toks.every(t=>norm(f.n).includes(t))).slice(0,40);
   return res.length?sec('',res.map(([k,f])=>cell({a:'fdPick',attrs:`data-k="${k}"`,title:`<span class="ct sm">${esc(f.n)}</span>`,sub:`${f.v[0]} kcal / 100 ${f.u||'g'} · P ${f.v[1]} · G ${f.v[2]} · L ${f.v[3]}`,chev:true})).join('')):`<div class="empty" style="padding:30px">Aucun aliment trouvé. Essaie l’onglet « Produits » ou « Rapide ».</div>`;
 }
 function selMac(){
@@ -2362,6 +2363,14 @@ function lgBody(){
   else if(L.tab==='off') body=`<div class="srch">${ic('search')}<input id="offQ" type="search" placeholder="Nom du produit, marque ou code-barres" value="${esc(L.offQ)}" autocomplete="off"><button class="tbtn b" data-a="offSearch" ${L.offLoading?'disabled':''}>${L.offLoading?'…':'Chercher'}</button></div>
      <div class="btnwrap" style="margin-bottom:16px"><button class="btn" data-a="scanOpen">${ic('barcode')} Scanner un code-barres</button></div>
      ${L.offErr?`<div class="empty" style="padding:24px">${esc(L.offErr)}</div>`:''}
+     ${L.nf?`<div class="card alert" style="margin-bottom:14px">${ic('warn')}<div><b style="font-size:15px">Code ${esc(L.nf.code)} absent de la base</b><div class="sub" style="font-size:13px;line-height:18px">Ajoute-le une fois depuis l’étiquette : la prochaine fois, le scan le retrouvera directement.</div></div></div>
+       ${sec('Nouveau produit (valeurs pour 100 g)',`<label class="cell"><span class="cbody"><span class="ct">Nom</span></span><input class="cin" id="npN" value="${esc(L.nf.n)}" placeholder="Framboises surgelées…" style="width:180px;text-align:right"></label>
+        <label class="cell"><span class="cbody"><span class="ct">Calories</span></span><input class="cin" id="npK" type="number" inputmode="decimal" placeholder="0"><span class="unit">kcal</span></label>
+        <label class="cell"><span class="cbody"><span class="ct">Protéines</span></span><input class="cin" id="npP" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
+        <label class="cell"><span class="cbody"><span class="ct">Glucides</span></span><input class="cin" id="npC" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
+        <label class="cell"><span class="cbody"><span class="ct">Lipides</span></span><input class="cin" id="npF" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
+        <label class="cell"><span class="cbody"><span class="ct">Portion habituelle</span><span class="cs">optionnel</span></span><input class="cin" id="npS" type="number" inputmode="decimal" placeholder="100"><span class="unit">g</span></label>`,'Recopie le tableau « pour 100 g » de l’emballage.')}
+       <div class="btnwrap"><button class="btn" data-a="npSave">Enregistrer dans Mes produits</button></div>`:''}
      ${L.offLoading?`<div class="empty" style="padding:24px">Recherche en cours…</div>`:L.off?(L.off.length?sec('Résultats Open Food Facts',L.off.map((o,i)=>cell({a:'offPick',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(o.n)}</span>`,sub:`${r1(o.v[0])} kcal / 100 g · P ${fmtNum(+o.v[1].toFixed(1))} · G ${fmtNum(+o.v[2].toFixed(1))} · L ${fmtNum(+o.v[3].toFixed(1))}`,chev:true})).join(''),'Valeurs déclarées sur l’emballage (base collaborative Open Food Facts).'):`<div class="empty" style="padding:24px">Aucun produit trouvé.</div>`):`<div class="sec-f" style="padding:0 20px">Produits du commerce (Open Food Facts). Lance une recherche par nom ou tape les chiffres du code-barres. Nécessite une connexion.</div>`}`;
   else body=sec('Saisie rapide',`<label class="cell"><span class="cbody"><span class="ct">Nom</span></span><input class="cin" id="qkN" placeholder="Restaurant, plat…" style="width:170px;text-align:right"></label>
       <label class="cell"><span class="cbody"><span class="ct">Calories</span></span><input class="cin" id="qkK" type="number" inputmode="numeric" placeholder="0"><span class="unit">kcal</span></label>
@@ -2384,24 +2393,45 @@ async function openScanner(){
   const ov=document.createElement('div'); ov.className='scan';
   ov.innerHTML=`<video id="scanV" playsinline muted autoplay></video><div class="scan-frame"><i></i><b></b></div>
     <div class="scan-top"><button class="tbtn" data-a="scanClose">Annuler</button></div>
-    <div class="scan-bot"><div class="scan-msg" id="scanMsg">Ouverture de la caméra…</div><button class="btn gray" data-a="scanPhoto">${ic('share')} Prendre une photo à la place</button></div>`;
-  document.body.appendChild(ov); _scan={ov,stop:null,done:false};
+    <div class="scan-bot"><div class="scan-msg" id="scanMsg">Ouverture de la caméra…</div><div class="scan-tip">Tiens le code-barres à l’horizontale, à 10–15 cm, dans le cadre.</div><button class="btn gray" data-a="scanPhoto">${ic('share')} Prendre une photo à la place</button></div>`;
+  document.body.appendChild(ov); _scan={ov,stop:null,done:false,timer:null};
   const msg=t=>{const m=$('#scanMsg'); if(m) m.textContent=t};
   try{
-    const v=$('#scanV');
-    if('BarcodeDetector' in window){
-      const det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e']});
-      const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
-      if(!_scan){st.getTracks().forEach(t=>t.stop());return}
-      _scan.stop=()=>st.getTracks().forEach(t=>t.stop()); v.srcObject=st; await v.play(); msg('Place le code-barres dans le cadre');
-      const loop=async()=>{ if(!_scan||_scan.done) return; try{const r=await det.detect(v); if(r.length) return scanFound(r[0].rawValue)}catch(e){} setTimeout(loop,120) }; loop(); return;
+    const v=$('#scanV'); v.setAttribute('playsinline',''); v.muted=true;
+    const zxP=('BarcodeDetector' in window)?null:loadZX();
+    const st=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}});
+    if(!_scan){st.getTracks().forEach(t=>t.stop());return}
+    _scan.stop=()=>{clearTimeout(_scan&&_scan.timer);st.getTracks().forEach(t=>t.stop())};
+    try{const tr=st.getVideoTracks()[0],cap=tr.getCapabilities?tr.getCapabilities():{}; if(cap.focusMode&&cap.focusMode.includes('continuous')) tr.applyConstraints({advanced:[{focusMode:'continuous'}]})}catch(e){}
+    v.srcObject=st; await v.play();
+    let decode;
+    if(!zxP){ const det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e']}); decode=async c=>{const r=await det.detect(c);return r.length?r[0].rawValue:null} }
+    else{
+      msg('Chargement du lecteur…'); const ZX=await zxP; if(!_scan) return;
+      const h=new Map(); h.set(ZX.DecodeHintType.POSSIBLE_FORMATS,[ZX.BarcodeFormat.EAN_13,ZX.BarcodeFormat.EAN_8,ZX.BarcodeFormat.UPC_A,ZX.BarcodeFormat.UPC_E]); h.set(ZX.DecodeHintType.TRY_HARDER,true);
+      const rd=new ZX.MultiFormatReader(); rd.setHints(h);
+      decode=async c=>{try{return rd.decode(new ZX.BinaryBitmap(new ZX.HybridBinarizer(new ZX.HTMLCanvasElementLuminanceSource(c)))).getText()}catch(e){return null}finally{try{rd.reset()}catch(e){}}};
     }
-    const ZX=await loadZX(); if(!_scan) return;
-    const rd=zxReader(ZX); _scan.stop=()=>{try{rd.reset()}catch(e){}};
-    await rd.decodeFromConstraints({video:{facingMode:{ideal:'environment'}},audio:false},v,res=>{ if(res&&_scan&&!_scan.done) scanFound(res.getText()) });
-    msg('Place le code-barres dans le cadre');
+    msg('Vise le code-barres');
+    /* On analyse plusieurs zones de l'image (bande centrale, bande large, image entière, image pivotée) */
+    const cv=document.createElement('canvas'), cx=cv.getContext('2d',{willReadFrequently:true}); let n=0;
+    const crop=(sx,sy,sw,sh,max,rot)=>{const k=Math.min(1,max/Math.max(sw,sh)); if(rot){cv.width=sh*k;cv.height=sw*k;cx.save();cx.translate(cv.width,0);cx.rotate(Math.PI/2);cx.drawImage(v,sx,sy,sw,sh,0,0,sw*k,sh*k);cx.restore()} else {cv.width=sw*k;cv.height=sh*k;cx.drawImage(v,sx,sy,sw,sh,0,0,cv.width,cv.height)} return cv};
+    const loop=async()=>{
+      if(!_scan||_scan.done) return;
+      const vw=v.videoWidth, vh=v.videoHeight;
+      if(vw&&vh){ const m=n++%4; let c;
+        if(m===0) c=crop(vw*.04,vh*.36,vw*.92,vh*.28,1100);
+        else if(m===1) c=crop(vw*.02,vh*.26,vw*.96,vh*.48,1200);
+        else if(m===2) c=crop(0,0,vw,vh,1280);
+        else c=crop(vw*.3,vh*.12,vw*.4,vh*.76,1100,true);
+        const code=await decode(c); if(code&&/^\d{8,14}$/.test(code)) return scanFound(code);
+        if(n===60) msg('Rapproche ou éloigne doucement le téléphone… ou prends une photo.');
+      }
+      if(_scan) _scan.timer=setTimeout(loop,90);
+    };
+    loop();
   }catch(e){
-    msg(e&&e.name==='NotAllowedError'?'Accès à la caméra refusé : autorise-le dans Réglages › Safari › Caméra, ou prends une photo.':e&&e.message==='net'?'Scanner indisponible sans connexion.':'Caméra indisponible : prends plutôt une photo du code-barres.');
+    msg(e&&e.name==='NotAllowedError'?'Accès à la caméra refusé : autorise-le dans Réglages › Safari › Caméra, ou prends une photo.':e&&e.message==='net'?'Lecteur indisponible sans connexion.':'Caméra indisponible : prends plutôt une photo du code-barres.');
   }
 }
 function closeScanner(){ if(!_scan) return; try{_scan.stop&&_scan.stop()}catch(e){} _scan.ov.remove(); _scan=null }
@@ -2413,9 +2443,12 @@ async function scanPhotoFile(file){
 }
 async function barcodeLookup(code){
   if(!LG||!$('#lgBody')) logSheet();
-  LG.tab='off'; LG.offQ=code; LG.sel=null; LG.off=null; LG.offLoading=true; LG.offErr=null; lgRefresh();
+  LG.tab='off'; LG.offQ=code; LG.sel=null; LG.off=null; LG.offErr=null; LG.nf=null;
+  const mine=(S.myprod||{})[code];
+  if(mine){ LG.sel={kind:'off',name:mine.n,v:mine.v,qty:mine.sv||100,unit:'g'}; lgRefresh(); toast('Produit trouvé dans Mes produits','checkCircle'); return }
+  LG.offLoading=true; lgRefresh();
   try{ const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,product_name_fr,brands,nutriments,serving_quantity,code`); const j=await r.json(), p=j.product;
-    if(!p||!p.nutriments||p.nutriments['energy-kcal_100g']==null){ LG.off=[]; LG.offErr=`Produit ${code} introuvable ou sans valeurs nutritionnelles : utilise la saisie rapide avec l’étiquette.` }
+    if(!p||!p.nutriments||p.nutriments['energy-kcal_100g']==null){ LG.off=null; LG.nf={code,n:p&&(p.product_name_fr||p.product_name)||''} }
     else { const o=offMap(p); LG.off=[o]; LG.sel={kind:'off',name:o.n,v:o.v,qty:o.sv||100,unit:'g'}; toast('Produit trouvé','checkCircle') }
   }catch(e){ LG.offErr='Recherche impossible pour le moment (connexion).' }
   LG.offLoading=false; lgRefresh();
@@ -2502,11 +2535,15 @@ document.addEventListener('click',ev=>{
         {label:'Ajouter à nouveau',fn:()=>{const {id,t,...c}=e; addLog(c,k); render(); toast(`+${r1(e.kcal)} kcal ajoutées`)}},
         {label:'Supprimer',style:'destructive',fn:()=>{S.log[k]=logOf(k).filter(x=>x.id!==e.id); save(); render(); toast('Supprimé','trash')}}]}); break; }
     case 'recentAdd': { const e=recents()[+el.dataset.i]; if(!e) break; const {id,t,meal,...c}=e; addLog({...c,meal:LG.meal}); render(); haptic(); toast(`+${r1(e.kcal)} kcal · ${e.name}`); break; }
-    case 'fdPick': { const f=FOODS[el.dataset.k]; LG.sel={kind:'food',name:f.n,v:f.v,u:f.u,pc:f.pc,unit:f.pc?'pc':'g',qty:f.pc?1:100}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
+    case 'fdPick': { const k0=el.dataset.k, f=k0.startsWith('mp_')?(()=>{const o=S.myprod[k0.slice(3)];return {n:o.n,v:o.v}})():FOODS[k0]; LG.sel={kind:'food',name:f.n,v:f.v,u:f.u,pc:f.pc,unit:f.pc?'pc':'g',qty:f.pc?1:100}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'rxPick': { const r=rxOf(el.dataset.id); LG.sel={kind:'rx',key:r.id,name:r.n,k:1}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'offPick': { const o=LG.off[+el.dataset.i]; LG.sel={kind:'off',name:o.n,v:o.v,qty:o.sv||100,unit:'g'}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'offSearch': offSearch(); break;
     case 'scanOpen': openScanner(); break;
+    case 'npSave': { const v=id=>parseFloat(String(($('#'+id)||{}).value||'').replace(',','.'))||0, k=v('npK'), pp=v('npP'), c=v('npC'), f=v('npF'), sv=v('npS');
+      const kc=k||(pp*4+c*4+f*9); if(!kc) return toastErr('Indique au moins les calories pour 100 g');
+      const n=(($('#npN')||{}).value||'').trim()||('Produit '+LG.nf.code); if(!S.myprod) S.myprod={};
+      S.myprod[LG.nf.code]={n,v:[kc,pp,c,f],sv}; save(); LG.sel={kind:'off',name:n,v:[kc,pp,c,f],qty:sv||100,unit:'g'}; LG.nf=null; lgRefresh(); toast('Ajouté à Mes produits'); break; }
     case 'scanClose': closeScanner(); break;
     case 'scanPhoto': { let inp=$('#scanFile'); if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.setAttribute('capture','environment');inp.id='scanFile';inp.style.display='none';document.body.appendChild(inp)} inp.value=''; inp.click(); break; }
     case 'lgBack': LG.sel=null; lgRefresh(); break;
