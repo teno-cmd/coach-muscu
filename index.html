@@ -766,7 +766,7 @@ function placeRows(o){
     ${(o.equip||[]).includes('halt')?`<div class="cell"><span class="cbody"><span class="ct">Haltère le plus lourd</span><span class="cs">Par haltère, pour plafonner les charges</span></span><div class="stp" style="width:132px;flex:none"><button data-a="eqMax" data-k="hmax" data-d="-1" aria-label="Moins">${ic('minus')}</button><span>${o.hmax||20}<small>kg</small></span><button data-a="eqMax" data-k="hmax" data-d="1" aria-label="Plus">${ic('plus')}</button></div></div>`:''}
     ${(o.equip||[]).includes('kettlebell')?`<div class="cell"><span class="cbody"><span class="ct">Kettlebell la plus lourde</span></span><div class="stp" style="width:132px;flex:none"><button data-a="eqMax" data-k="kbmax" data-d="-1" aria-label="Moins">${ic('minus')}</button><span>${o.kbmax||16}<small>kg</small></span><button data-a="eqMax" data-k="kbmax" data-d="1" aria-label="Plus">${ic('plus')}</button></div></div>`:''}
    </div>
-   <div id="gymEq" style="display:${home?'none':'block'}">${cell({a:'gymOpen',icon:ic('target'),bg:'var(--indigo)',title:'Ma salle et ses machines',value:esc((CHAINS[(S.profile&&S.profile.chain)||'onair']||CHAINS.autre).n),chev:true})}</div>`;
+   <div id="gymEq" style="display:${home?'none':'block'}">${cell({a:'gymOpen',icon:ic('target'),bg:'var(--indigo)',title:'Ma salle et ses machines',value:esc((CHAINS[o.chain||'onair']||CHAINS.autre).n),sub:(o.noMach||[]).length?(o.noMach.length+' machine(s) indisponible(s)'):'Enseigne, machines, photos',chev:true})}</div>`;
 }
 function placeSheet(){
   F={...S.profile,prio:[...(S.profile.prio||[])],equip:[...(S.profile.equip||[])],_sheet:true};
@@ -954,8 +954,9 @@ function machSection(id){
 }
 function gymSheet(){
   const g=gymOf(), used=new Set(Object.values(MACH_OF)), keys=Object.keys(MACH).filter(k=>used.has(k)), ph=phAll();
-  GF={chain:g.chain,noMach:[...g.noMach]};
-  openSheet(`<div id="gymBody">${gymBody(keys,ph)}</div><div class="btnwrap"><button class="btn" data-a="gymSave">Appliquer au programme</button></div>`,{title:'Ma salle'});
+  const src=(F&&!F._sheet)?F:(S.profile||{});
+  GF={chain:src.chain||g.chain||'onair',noMach:[...(src.noMach||g.noMach||[])]};
+  openSheet(`<div id="gymBody">${gymBody(keys,ph)}</div><div class="btnwrap"><button class="btn" data-a="gymSave">${S.profile?'Appliquer au programme':'Valider'}</button></div>`,{title:'Ma salle'});
 }
 function gymBody(keys,ph){
   keys=keys||Object.keys(MACH).filter(k=>new Set(Object.values(MACH_OF)).has(k)); ph=ph||phAll();
@@ -1640,8 +1641,18 @@ function openSheet(html,o){
   sh.innerHTML=`<div class="sheet-bg" data-a="closeSheet"></div><div class="sheet-body" id="sheetBody"><div class="sh-head" id="shHead"><div class="grabber"></div><div class="sh-bar"><span></span><span class="t">${o.title||''}</span><button class="tbtn b" style="justify-self:end" data-a="closeSheet">OK</button></div></div><div class="sh-scroll" id="shScroll">${html}</div></div>`;
   void sh.offsetHeight; sh.classList.add('open'); refreshAnims(); bindSheetDrag();
 }
+/* Enregistre « Ma salle » dès la fermeture de la feuille (OK, glisser ou bouton) */
+function gymCommit(){
+  if(!GF) return; const g=GF; GF=null;
+  if(F&&!F._sheet){F.chain=g.chain;F.noMach=[...g.noMach]}
+  if(!S.profile){render();return}
+  const machChanged=JSON.stringify([...(S.profile.noMach||[])].sort())!==JSON.stringify([...g.noMach].sort()), chainChanged=S.profile.chain!==g.chain;
+  S.profile.chain=g.chain; S.profile.noMach=[...g.noMach];
+  if(machChanged&&S.profile.place!=='home'){S.program=generate(S.profile);ensureCycle();progDay=null}
+  save(); render(); if(machChanged||chainChanged) toast(machChanged?'Programme adapté à ta salle':'Salle : '+(CHAINS[g.chain]||CHAINS.autre).n);
+}
 function closeSheet(){
-  const sh=$('#sheet'); if(!sh.classList.contains('open')) return; if(F&&F._sheet) F=null;
+  const sh=$('#sheet'); if(!sh.classList.contains('open')) return; if(F&&F._sheet) F=null; if(GF) gymCommit();
   const b=$('#sheetBody'); sh.classList.remove('open'); if(b){b.style.transition='';b.style.transform=''}
   setTimeout(()=>{if(!sh.classList.contains('open')){sh.innerHTML='';refreshAnims()}},520);
 }
@@ -2228,10 +2239,10 @@ document.addEventListener('click',ev=>{
     case 'science': sciSheet(); break;
     case 'change': changeSheet(); break;
     case 'placeOpen': placeSheet(); break;
-    case 'gymOpen': if(!S.profile){toast('Enregistre d’abord ton profil','info');break} gymSheet(); break;
+    case 'gymOpen': if(F&&!F._sheet) readForm(); gymSheet(); break;
     case 'chainF': GF.chain=el.dataset.c; haptic(); $('#gymBody').innerHTML=gymBody(); refreshAnims(); break;
     case 'machF': { const k=el.dataset.k, i=GF.noMach.indexOf(k); if(i>=0) GF.noMach.splice(i,1); else GF.noMach.push(k); el.classList.toggle('sel',i>=0); haptic(); break; }
-    case 'gymSave': { S.profile.chain=GF.chain; S.profile.noMach=[...GF.noMach]; GF=null; if(S.profile.place!=='home'){S.program=generate(S.profile); ensureCycle(); progDay=null} save(); closeSheet(); render(); toast('Ma salle mise à jour'); break; }
+    case 'gymSave': closeSheet(); break;
     case 'fiche': ficheSheet(+el.dataset.d); break;
     case 'figMode': figMode=el.dataset.val; segUpdate(el); haptic(); setTimeout(render,250); break;
     case 'phAdd': { let inp=$('#phFile'); if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.id='phFile';inp.style.display='none';document.body.appendChild(inp)} inp.dataset.k=el.dataset.k; inp.value=''; inp.click(); break; }
