@@ -2378,7 +2378,7 @@ let _zxP=null, _scan=null;
 function loadZX(){ if(window.ZXing) return Promise.resolve(window.ZXing); if(_zxP) return _zxP;
   _zxP=new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=ZX_URL;sc.async=true;sc.crossOrigin='anonymous';sc.onload=()=>window.ZXing?res(window.ZXing):rej(new Error('net'));sc.onerror=()=>{_zxP=null;rej(new Error('net'))};document.head.appendChild(sc)}); return _zxP }
 function zxReader(ZX){const h=new Map();h.set(ZX.DecodeHintType.POSSIBLE_FORMATS,[ZX.BarcodeFormat.EAN_13,ZX.BarcodeFormat.EAN_8,ZX.BarcodeFormat.UPC_A,ZX.BarcodeFormat.UPC_E]);h.set(ZX.DecodeHintType.TRY_HARDER,true);return new ZX.BrowserMultiFormatReader(h,300)}
-function offMap(p){return {n:(p.product_name_fr||p.product_name||'Produit')+(p.brands?' · '+p.brands.split(',')[0]:''),v:[+p.nutriments['energy-kcal_100g']||0,+p.nutriments.proteins_100g||0,+p.nutriments.carbohydrates_100g||0,+p.nutriments.fat_100g||0],sv:+p.serving_quantity||0}}
+function offMap(p){const nm=(p.product_name_fr||p.product_name||'Produit').trim(), br=p.brands?p.brands.split(',')[0].trim():''; return {n:nm+(br&&!norm(nm).includes(norm(br))?' · '+br:''),v:[+p.nutriments['energy-kcal_100g']||0,+p.nutriments.proteins_100g||0,+p.nutriments.carbohydrates_100g||0,+p.nutriments.fat_100g||0],sv:+p.serving_quantity||0}}
 async function openScanner(){
   if(_scan) return;
   const ov=document.createElement('div'); ov.className='scan';
