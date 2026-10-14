@@ -1185,7 +1185,17 @@ function nutrition(p){
   const tdee = bmr*(1.2+0.075*p.days);
   const k = {masse:1.1,seche:.8,recompo:1}[p.goal];
   const prot = {masse:1.8,seche:2.2,recompo:2}[p.goal];
-  return {kcal:Math.round(tdee*k/10)*10, tdee:Math.round(tdee/10)*10, prot:Math.round(p.weight*prot), imc:(p.weight/((p.height/100)**2)).toFixed(1)};
+  /* Plancher de sécurité : pas en dessous de 1 200 kcal (F) / 1 500 kcal (H) sans suivi médical,
+     sans jamais dépasser la maintenance en sèche. */
+  const raw = tdee*k, minK = p.sex==='F'?1200:1500, floorK = Math.min(minK, tdee);
+  const kc = Math.max(raw, floorK), floored = kc > raw + 1;
+  const kcal = Math.round(kc/10)*10;
+  /* IMC > 30 : protéines calculées sur un poids ajusté (poids à IMC 25 + 40 % de l'excédent),
+     plafonnées à 40 % des calories. */
+  const h2 = (p.height/100)**2, imc = p.weight/h2, w25 = 25*h2;
+  const refW = imc > 30 ? w25 + .4*(p.weight - w25) : p.weight;
+  const protG = Math.round(Math.min(refW*prot, kcal*.4/4));
+  return {kcal, tdee:Math.round(tdee/10)*10, prot:protG, refW:Math.round(refW), adjW:imc>30, floored, imc:imc.toFixed(1)};
 }
 
 /* ---------- Audio / vibration / écran allumé ---------- */
@@ -2046,7 +2056,7 @@ function dayPlan(){
   _plan={key,items,k:best.k,sum,M}; return _plan;
 }
 function vNutrition(){
-  const p=S.profile, M=macros(p), per=Math.round(p.weight*.4), P=dayPlan();
+  const p=S.profile, M=macros(p), per=Math.round(M.refW*.4), P=dayPlan();
   const omad=NUT().omad;
   return page('Nutrition',{sub:`${GOALS[p.goal].n} · ${omad?'mode OMAD, un repas par jour':'objectifs quotidiens'}`},
   `${sec('',cell({icon:ic('clock',1),bg:omad?'var(--tint)':'var(--gray)',title:'Mode OMAD',sub:'Un seul repas par jour (jeûne intermittent)',right:`<button class="sw ${omad?'on':''}" data-a="omadToggle" aria-label="Mode OMAD"></button>`}))}
@@ -2058,13 +2068,13 @@ function vNutrition(){
      <div class="bignum">${M.kcal.toLocaleString('fr-FR')}<small>kcal</small></div>
      <div class="mbar"><i style="flex:${M.prot*4};background:var(--P)"></i><i style="flex:${M.carb*4};background:var(--G)"></i><i style="flex:${M.fat*9};background:var(--L)"></i></div>
      <div class="mleg"><div><b style="color:var(--P)">${M.prot} g</b><span>Protéines</span></div><div><b style="color:var(--G)">${M.carb} g</b><span>Glucides</span></div><div><b style="color:var(--L)">${M.fat} g</b><span>Lipides</span></div></div>
-     <div class="sub mt">${p.goal==='masse'?'Léger surplus (~10 %) au-dessus':p.goal==='seche'?'Déficit d’environ 20 % sous':'Au niveau de'} ta maintenance estimée (${M.tdee.toLocaleString('fr-FR')} kcal). Protéines : ${fmtNum((M.prot/p.weight).toFixed(1))} g/kg ; lipides : 25 % des calories ; glucides : le reste.</div>
+     <div class="sub mt">${M.floored?(M.kcal>=M.tdee?'Au niveau de':'Déficit réduit sous'):p.goal==='masse'?'Léger surplus (~10 %) au-dessus':p.goal==='seche'?'Déficit d’environ 20 % sous':'Au niveau de'} ta maintenance estimée (${M.tdee.toLocaleString('fr-FR')} kcal).${M.floored?(M.kcal<(p.sex==='F'?1200:1500)?` Ta maintenance est sous le seuil de sécurité de ${p.sex==='F'?'1 200':'1 500'} kcal : pas de déficit sans suivi médical, mise au niveau de la maintenance.`:` Plancher de sécurité appliqué : pas moins de ${p.sex==='F'?'1 200':'1 500'} kcal par jour sans suivi médical.`):''} Protéines : ${fmtNum((M.prot/M.refW).toFixed(1))} g/kg${M.adjW?` d’un poids de référence de ${M.refW} kg (calcul ajusté à ton IMC)`:''} ; lipides : 25 % des calories ; glucides : le reste.</div>
    </div>
    ${omad?vOmad():`${sec('Répartition des protéines',cell({icon:ic('clock',1),bg:'var(--pink)',title:`4 prises d’environ ${per} g`,sub:'0,4 g/kg par repas, espacées de 3 à 4 h'}),'Répartir les protéines sur au moins 4 repas optimise la construction musculaire (Schoenfeld & Aragon, 2018).',true)}
    ${sec('Autour de ta séance',
-      cell({a:'rxCatGo',attrs:'data-c="repas"',icon:ic('timer'),bg:'var(--blue)',title:'2 à 3 h avant',sub:`Repas complet : ~${r0(p.weight*.3)} g de protéines, des glucides, peu de graisses et de fibres.`,chev:true})
+      cell({a:'rxCatGo',attrs:'data-c="repas"',icon:ic('timer'),bg:'var(--blue)',title:'2 à 3 h avant',sub:`Repas complet : ~${r0(M.refW*.3)} g de protéines, des glucides, peu de graisses et de fibres.`,chev:true})
      +cell({a:'rxCatGo',attrs:'data-c="pre"',icon:ic('bolt'),bg:'var(--orange)',title:'30 à 60 min avant',sub:'Collation digeste : glucides rapides et un peu de protéines.',chev:true})
-     +cell({a:'rxCatGo',attrs:'data-c="post"',icon:ic('dumbbell',1),bg:'var(--green)',title:'0 à 2 h après',sub:`${r0(p.weight*.25)} à ${r0(p.weight*.4)} g de protéines (0,25–0,4 g/kg) avec des glucides.`,chev:true})
+     +cell({a:'rxCatGo',attrs:'data-c="post"',icon:ic('dumbbell',1),bg:'var(--green)',title:'0 à 2 h après',sub:`${r0(M.refW*.25)} à ${r0(M.refW*.4)} g de protéines (0,25–0,4 g/kg) avec des glucides.`,chev:true})
      +cell({a:'rxCatGo',attrs:'data-c="shake"',icon:ic('clock',1),bg:'var(--indigo)',title:'Avant de dormir (optionnel)',sub:'30 à 40 g de caséine pour la synthèse protéique nocturne.',chev:true}),
      'Le total quotidien de protéines reste le facteur principal ; le timing affine les résultats (ISSN, 2017).',true)}
    ${sec('Exemple de journée',P.items.map(o=>{const m=rxMac(o.r,P.k);return cell({a:'rx',attrs:`data-id="${o.r.id}" data-k="${P.k}"`,icon:`<span class="emo">${o.r.em}</span>`,bg:'var(--bg3)',title:esc(o.r.n),sub:`${o.lbl} · ${r0(m.kcal)} kcal · ${r0(m.p)} g de protéines`,chev:true})}).join(''),
@@ -2128,7 +2138,7 @@ const OMAD_MENUS=[
  {id:'omad_tofu',n:'Bowl tofu, quinoa & pois chiches',em:'🥗',pr:'tofu',pr2:'grec',cb:'quinoa',fix:[['pois_chiches',100],['concombre',80]],top:[['myrtilles',100]]},
 ];
 const OMAD_SHAKE_BASE=[['whey',40],['lait',300],['avoine',50],['bcac',15]];
-const CAP={pr:[150,350],pr2:[150,400],cb:[100,500],cb2:[0,250],ft:[0,50]};
+const CAP={pr:[100,350],pr2:[0,400],cb:[100,500],cb2:[0,250],ft:[0,50]};
 const RX_DYN={};
 function NUT(){ if(!S.nutri) S.nutri={omad:false,formula:'shake',meal:19,train:17,menu:'omad_saumon'}; return S.nutri }
 const fmtH=h=>`${Math.floor(h)}:${h%1?'30':'00'}`;
@@ -2140,7 +2150,9 @@ function solveMenu(menu,T){
   const others=(m,ex)=>{let o=fx[m];for(const k in q) if(!ex.includes(k)) o+=per(k,m)*q[k];return o};
   for(let it=0;it<100;it++){
     // protéines : source principale, puis dessert lacté si le plafond est atteint
-    let need=T.p-others('p',['pr','pr2']); q.pr=cl('pr',(need-per('pr2','p')*CAP.pr2[0])/per('pr','p')); q.pr2=cl('pr2',(need-per('pr','p')*q.pr)/per('pr2','p'));
+    // (si la source principale est grasse, on la limite pour ne pas dépasser les lipides : le dessert lacté maigre complète)
+    let need=T.p-others('p',['pr','pr2']); const prFat=(T.f-others('f',['pr','ft']))/per('pr','f');
+    q.pr=cl('pr',Math.min(need/per('pr','p'),prFat)); q.pr2=cl('pr2',(need-per('pr','p')*q.pr)/per('pr2','p'));
     // glucides : féculent principal, puis baguette
     need=T.c-others('c',['cb','cb2']); q.cb=cl('cb',need/per('cb','c')); q.cb2=cl('cb2',(need-per('cb','c')*q.cb)/per('cb2','c'));
     // lipides : huile d'olive pour compléter
@@ -2150,7 +2162,8 @@ function solveMenu(menu,T){
   const out=[[V.pr,R('pr',q.pr)],[V.cb,R('cb',q.cb)],...menu.fix];
   if(q.cb2>=15) out.push(['baguette',R('cb2',q.cb2)]);
   if(q.ft>=2) out.push(['huile',R('ft',q.ft)]);
-  out.push([V.pr2,R('pr2',q.pr2)],...menu.top);
+  if(q.pr2>=50) out.push([V.pr2,R('pr2',q.pr2)]);
+  out.push(...menu.top);
   return out;
 }
 function omadTiming(){
@@ -2304,7 +2317,7 @@ function logTot(k){const o={kcal:0,p:0,c:0,f:0};logOf(k).forEach(e=>{o.kcal+=e.k
 function defMeal(){ if(NUT().omad) return 'repas'; const d=new Date(), h=d.getHours()+d.getMinutes()/60; return h<10.5?'pdj':h<15?'dej':h<18.5?'col':'din'}
 function addLog(e,k){ k=k||curDay(); if(!S.log) S.log={}; (S.log[k]=S.log[k]||[]).push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:Date.now(),...e});
   const keys=Object.keys(S.log).sort(); while(keys.length>120) delete S.log[keys.shift()]; save(); }
-function dayLabel(k){const t=todayK(), y=dKey(Date.now()-dayMs); if(k===t) return 'Aujourd’hui'; if(k===y) return 'Hier';
+function dayLabel(k){const t=todayK(), y=shiftDay(t,-1); if(k===t) return 'Aujourd’hui'; if(k===y) return 'Hier';
   const [Y,M,D]=k.split('-').map(Number); return new Date(Y,M-1,D).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}).replace(/^./,c=>c.toUpperCase())}
 function shiftDay(k,n){const [Y,M,D]=k.split('-').map(Number); return dKey(new Date(Y,M-1,D+n).getTime())}
 const r1=x=>Math.round(x);
@@ -2314,7 +2327,7 @@ function weekChart(target){
   const ty=H-target/mx*H;
   return `<svg viewBox="0 0 ${W} ${H+18}" class="wchart" aria-label="Calories des 7 derniers jours">
     ${days.map((k,i)=>{const v=vals[i], h=Math.max(v?3:0,v/mx*H), x=i*(bw+gap); const over=v>target*1.1, under=v>0&&v<target*.9;
-      return `<rect x="${x}" y="${H-h}" width="${bw}" height="${h}" rx="5" fill="${!v?'rgba(118,118,128,.24)':over?'var(--orange)':under?'rgba(200,255,46,.45)':'var(--tint)'}"/><text x="${x+bw/2}" y="${H+14}" text-anchor="middle" class="wlbl${k===curDay()?' on':''}">${['D','L','M','M','J','V','S'][new Date(Date.now()-(6-i)*dayMs).getDay()]}</text>`}).join('')}
+      return `<rect x="${x}" y="${H-h}" width="${bw}" height="${h}" rx="5" fill="${!v?'rgba(118,118,128,.24)':over?'var(--orange)':under?'rgba(200,255,46,.45)':'var(--tint)'}"/><text x="${x+bw/2}" y="${H+14}" text-anchor="middle" class="wlbl${k===curDay()?' on':''}">${['D','L','M','M','J','V','S'][(([Y,M,D])=>new Date(Y,M-1,D).getDay())(k.split('-').map(Number))]}</text>`}).join('')}
     <line x1="0" y1="${ty}" x2="${W}" y2="${ty}" stroke="rgba(235,235,245,.5)" stroke-width="1.2" stroke-dasharray="4 4"/></svg>`;
 }
 function vJournal(){
@@ -2430,7 +2443,9 @@ let _zxP=null, _scan=null;
 function loadZX(){ if(window.ZXing) return Promise.resolve(window.ZXing); if(_zxP) return _zxP;
   _zxP=new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=ZX_URL;sc.async=true;sc.crossOrigin='anonymous';sc.onload=()=>window.ZXing?res(window.ZXing):rej(new Error('net'));sc.onerror=()=>{_zxP=null;rej(new Error('net'))};document.head.appendChild(sc)}); return _zxP }
 function zxReader(ZX){const h=new Map();h.set(ZX.DecodeHintType.POSSIBLE_FORMATS,[ZX.BarcodeFormat.EAN_13,ZX.BarcodeFormat.EAN_8,ZX.BarcodeFormat.UPC_A,ZX.BarcodeFormat.UPC_E]);h.set(ZX.DecodeHintType.TRY_HARDER,true);return new ZX.BrowserMultiFormatReader(h,300)}
-function offMap(p){const nm=(p.product_name_fr||p.product_name||'Produit').trim(), br=p.brands?p.brands.split(',')[0].trim():''; return {n:nm+(br&&!norm(nm).includes(norm(br))?' · '+br:''),v:[+p.nutriments['energy-kcal_100g']||0,+p.nutriments.proteins_100g||0,+p.nutriments.carbohydrates_100g||0,+p.nutriments.fat_100g||0],sv:+p.serving_quantity||0}}
+/* Énergie pour 100 g en kcal ; si l'étiquette ne donne que des kJ, conversion (1 kcal = 4,184 kJ). */
+function offKcal(p){const n=p&&p.nutriments; if(!n) return null; const k=n['energy-kcal_100g']; if(k!=null&&k!=='') return +k; const kj=n['energy-kj_100g']??n['energy_100g']; return kj!=null&&kj!==''?Math.round(+kj/4.184):null}
+function offMap(p){const nm=(p.product_name_fr||p.product_name||'Produit').trim(), br=p.brands?p.brands.split(',')[0].trim():''; return {n:nm+(br&&!norm(nm).includes(norm(br))?' · '+br:''),v:[offKcal(p)||0,+p.nutriments.proteins_100g||0,+p.nutriments.carbohydrates_100g||0,+p.nutriments.fat_100g||0],sv:+p.serving_quantity||0}}
 async function openScanner(){
   if(_scan) return;
   const ov=document.createElement('div'); ov.className='scan';
@@ -2496,7 +2511,7 @@ async function barcodeLookup(code){
   if(mine){ LG.sel={kind:'off',name:mine.n,v:mine.v,qty:mine.sv||100,unit:'g'}; lgRefresh(); toast('Produit trouvé dans Mes produits','checkCircle'); return }
   LG.offLoading=true; lgRefresh();
   try{ const j=await offFetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${OFF_F}`), p=j.product;
-    if(!p||!p.nutriments||p.nutriments['energy-kcal_100g']==null) LG.nf={code,n:p&&(p.product_name_fr||p.product_name)||''};
+    if(offKcal(p)==null) LG.nf={code,n:p&&(p.product_name_fr||p.product_name)||''};
     else { const o=offMap(p); LG.sel={kind:'off',name:o.n,v:o.v,qty:o.sv||100,unit:'g'}; toast('Produit trouvé','checkCircle') }
   }catch(e){ LG.offErr=OFF_ERR[e.message]||OFF_ERR.http; LG.nf={code,n:''} }
   LG.offLoading=false; lgRefresh();
@@ -2507,7 +2522,7 @@ async function offSearchRaw(q){
   try{ const j=await offFetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=24&lc=fr&cc=fr&fields=${OFF_F}`); prods=j.products||[] }
   catch(e){ if(e.message==='rate'||e.message==='offline') throw e;
     const slug=norm(q).trim().replace(/[^a-z0-9]+/g,'-'); const j=await offFetch(`https://world.openfoodfacts.org/api/v2/search?categories_tags_fr=${slug}&countries_tags_fr=france&page_size=24&fields=${OFF_F}`); prods=j.products||[] }
-  const out=prods.filter(p=>(p.product_name_fr||p.product_name||'').trim()&&p.nutriments&&p.nutriments['energy-kcal_100g']!=null).map(offMap);
+  const out=prods.filter(p=>(p.product_name_fr||p.product_name||'').trim()&&offKcal(p)!=null).map(offMap);
   cache[q]=out; return out;
 }
 async function offSearch(){
