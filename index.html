@@ -334,6 +334,35 @@ svg.fig .pd{fill:#48484a}
 .mnum{width:24px;height:24px;border-radius:50%;background:var(--tint);color:#000;display:grid;place-items:center;font:700 13px var(--round);flex:none;margin-top:-1px}
 .figseg{margin-top:12px}
 
+.machsvg.rnd{border-radius:12px}
+.mbox:has(.rnd){padding:8px;background:var(--bg2)}
+.figbox:has(.rnd){padding:0;background:none}
+.figbox .rnd{border-radius:16px}
+.abase{fill:#2c2c2e}.azo{fill:#48484a;stroke:#1c1c1e;stroke-width:.6}.azp{fill:var(--tint);stroke:#1c1c1e;stroke-width:.6}.azs{fill:rgba(200,255,46,.42);stroke:#1c1c1e;stroke-width:.6}.aline{stroke:#1c1c1e;stroke-width:.8;fill:none}
+.albl{font:600 9px var(--font);fill:var(--label2);text-anchor:middle}
+.anat{display:block;width:100%;height:auto}
+.figbox .anat{height:100%;width:auto;margin:0 auto}
+.abox{padding:12px 24px 8px;border-bottom:.5px solid var(--sep)}
+.abox .anat{max-height:250px;width:auto;margin:0 auto}
+.mtag{display:inline-block;font-size:12px;font-weight:600;padding:3px 8px;border-radius:6px;margin:2px 4px 2px 0;background:var(--tint);color:#000}
+.mtag.s{background:rgba(200,255,46,.18);color:var(--tint)}
+/* Fiche séance */
+.fhead{margin:0 16px 14px;border-radius:16px;overflow:hidden;background:var(--bg2)}
+.fhead .top{padding:16px;background:linear-gradient(135deg,#2a3510,#1c1c1e 65%)}
+.fstats{display:grid;grid-template-columns:repeat(3,1fr);border-top:.5px solid var(--sep)}
+.fstats div{padding:10px 6px;text-align:center}.fstats div+div{border-left:.5px solid var(--sep)}
+.fstats b{display:block;font:600 15px var(--round)}.fstats span{font-size:11px;color:var(--label2);text-transform:uppercase}
+.frow{display:grid;grid-template-columns:24px 1fr;gap:10px;padding:12px;border-top:.5px solid var(--sep)}
+.frow:first-child{border-top:0}
+.fnum{width:24px;height:24px;border-radius:50%;background:var(--tint);color:#000;display:grid;place-items:center;font:700 13px var(--round)}
+.fimgs{display:grid;grid-template-columns:1.25fr 1fr;gap:8px;margin:8px 0}
+.fimgs>div{border-radius:10px;overflow:hidden;background:#161618;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center}
+.fimgs .machsvg,.fimgs svg.fig,.fimgs .mphoto{width:100%;height:100%;object-fit:cover}
+.fimgs .anat{height:100%;width:auto;padding:4px}
+.fchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.fchips span{font:600 12px var(--round);padding:4px 9px;border-radius:7px;background:var(--fill4)}
+.fchips b{color:var(--tint)}
+
 /* ---- Transitions ---- */
 @keyframes fadeIn{from{opacity:0}}
 @keyframes pushIn{from{opacity:0;transform:translateX(24%)}}
@@ -760,14 +789,33 @@ function otherPlaceDay(i){
    - « Ma salle » : enseigne (indication des marques), machines absentes (le programme les évite),
      et photo perso de chaque machine prise dans TA salle.
    ========================================================= */
+let MDR=true; /* true = rendu « produit » (métal noir, fond studio) ; false = schéma */
+const MCOL={mfr:['#141416','#55555b'],mpdl:['#1e1e21','#3d3d42'],mhd:['#2a2a2d','#5a5a60']};
 const MD={
- l:(x1,y1,x2,y2,w=5,c='mfr')=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${c}" stroke-width="${w}"/>`,
- r:(x,y,w,h,c='mpd',rx=4)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" class="${c}"/>`,
- c:(x,y,r,c='mpl')=>`<circle cx="${x}" cy="${y}" r="${r}" class="${c}"/>`,
- p:(d,c='mcb')=>`<path d="${d}" class="${c}"/>`,
- stack:(x,y,w,h)=>{let s=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" class="mst"/>`;for(let yy=y+7;yy<y+h;yy+=7)s+=`<line x1="${x+2}" y1="${yy}" x2="${x+w-2}" y2="${yy}" class="msl"/>`;return s+`<circle cx="${x+w-5}" cy="${y+h*.45}" r="2.5" class="mpin"/>`},
+ l:(x1,y1,x2,y2,w=5,c='mfr')=>{
+  if(!MDR) return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${c}" stroke-width="${w}"/>`;
+  if(c==='mcb') return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#77777d" stroke-width="1.3"/>`;
+  const [base,hi]=MCOL[c]||MCOL.mfr, dx=x2-x1, dy=y2-y1, L=Math.hypot(dx,dy);
+  let o=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${base}" stroke-width="${w+1}" stroke-linecap="round"/>`;
+  if(L>2){const k=w*.22/L, nx=-dy*k, ny=dx*k, sx=ny>0?-1:1; o+=`<line x1="${(x1+nx*sx).toFixed(1)}" y1="${(y1+ny*sx).toFixed(1)}" x2="${(x2+nx*sx).toFixed(1)}" y2="${(y2+ny*sx).toFixed(1)}" stroke="${hi}" stroke-width="${Math.max(.8,w*.26).toFixed(1)}" stroke-linecap="round" opacity=".9"/>`}
+  return o},
+ r:(x,y,w,h,c='mpd',rx=4)=>{ if(!MDR) return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" class="${c}"/>`;
+  if(c==='mhdr') return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="#2a2a2d" stroke="#141416" stroke-width="1.5"/>`;
+  if(c==='mst') return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="#232326" stroke="#0e0e10" stroke-width="1"/>`;
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="#1e1e21" stroke="#0e0e10" stroke-width="1"/><rect x="${x+1.5}" y="${y+1}" width="${Math.max(0,w-3)}" height="${(h*.32).toFixed(1)}" rx="${Math.max(1,rx-1)}" fill="#fff" opacity=".07"/>`},
+ c:(x,y,r,c='mpl')=>{ if(!MDR) return `<circle cx="${x}" cy="${y}" r="${r}" class="${c}"/>`;
+  if(c==='mpl') return `<circle cx="${x}" cy="${y}" r="${r}" fill="#151517" stroke="#2e2e32" stroke-width="2.2"/><circle cx="${x}" cy="${y}" r="${(r*.62).toFixed(1)}" fill="none" stroke="#26262a" stroke-width="1.2"/><circle cx="${x}" cy="${y}" r="${(r*.22).toFixed(1)}" fill="#8e8e93"/>`;
+  if(c==='mpd') return `<circle cx="${x}" cy="${y}" r="${r}" fill="#1e1e21" stroke="#0e0e10" stroke-width="1"/><circle cx="${x-r*.3}" cy="${y-r*.3}" r="${(r*.35).toFixed(1)}" fill="#fff" opacity=".08"/>`;
+  if(c==='mhdf') return `<circle cx="${x}" cy="${y}" r="${r}" fill="#9a9aa0"/>`;
+  return `<circle cx="${x}" cy="${y}" r="${r}" fill="#4a4a4f"/>`},
+ p:(d,c='mcb')=>{ if(!MDR) return `<path d="${d}" class="${c}"/>`;
+  return c==='mcb'?`<path d="${d}" fill="none" stroke="#77777d" stroke-width="1.3"/>`:`<path d="${d}" fill="none" stroke="#2a2a2d" stroke-width="3.2" stroke-linejoin="round"/>`},
+ stack:(x,y,w,h)=>{ if(!MDR){let s=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" class="mst"/>`;for(let yy=y+7;yy<y+h;yy+=7)s+=`<line x1="${x+2}" y1="${yy}" x2="${x+w-2}" y2="${yy}" class="msl"/>`;return s+`<circle cx="${x+w-5}" cy="${y+h*.45}" r="2.5" class="mpin"/>`}
+  let s=`<line x1="${x+3}" y1="${y-40}" x2="${x+3}" y2="${y+h}" stroke="#b5b5bb" stroke-width="1.6"/><line x1="${x+w-3}" y1="${y-40}" x2="${x+w-3}" y2="${y+h}" stroke="#b5b5bb" stroke-width="1.6"/>`;
+  for(let yy=y;yy<y+h-1;yy+=7) s+=`<rect x="${x}" y="${yy}" width="${w}" height="6.2" rx="1" fill="#1b1b1e"/><rect x="${x+1}" y="${yy+.6}" width="${w-2}" height="1.4" fill="#fff" opacity=".08"/>`;
+  return s+`<circle cx="${x+w/2}" cy="${y+h*.45}" r="2.2" fill="#c8ff2e"/>`},
  tower:(x,w=34,top=12)=>MD.l(x,top,x,168,5)+MD.l(x+w,top,x+w,168,5)+MD.l(x,top,x+w,top,5),
- floor:()=>`<line x1="8" y1="170" x2="232" y2="170" class="mfl"/>`,
+ floor:()=>MDR?`<ellipse cx="120" cy="171" rx="104" ry="6" fill="#000" opacity=".16"/>`:`<line x1="8" y1="170" x2="232" y2="170" class="mfl"/>`,
 };
 const MACH={
  presse45:{n:'Presse à cuisses inclinée (45°)',zone:'Espace machines à disques / jambes',look:'Grand chariot qui coulisse sur deux rails en diagonale, siège très incliné en bas et plateforme pour les pieds en haut.',
@@ -886,7 +934,8 @@ function compressImg(file,max=720,q=.72){return new Promise((res,rej)=>{const fr
 function machSVG(id,num=true){
   const k=MACH_OF[id], M=MACH[k]; if(!M) return '';
   const pts=M.pts.map(([x,y],i)=>{ if(k==='crossover'){const h=(MACH_SET[id]&&MACH_SET[id].h!=null)?MACH_SET[id].h:60; if(i===0){x=210;y=h} if(i===1){x=170;y=h>100?h-48:h+40}} return num?`<g class="mco"><circle cx="${x}" cy="${y}" r="9"/><text x="${x}" y="${y+4}" text-anchor="middle">${i+1}</text></g>`:''}).join('');
-  return `<svg class="machsvg" viewBox="0 0 240 180" aria-label="${esc(M.n)}">${M.draw(id)}${pts}</svg>`;
+  const bg=MDR?`<defs><linearGradient id="mbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f4f6"/><stop offset="1" stop-color="#cdcdd2"/></linearGradient></defs><rect width="240" height="180" fill="url(#mbg)"/>`:'';
+  return `<svg class="machsvg${MDR?' rnd':''}" viewBox="0 0 240 180" aria-label="${esc(M.n)}">${bg}${M.draw(id)}${pts}</svg>`;
 }
 function machVisual(id){const k=MACH_OF[id], ph=phAll()[k]; return ph?`<img class="mphoto" src="${ph}" alt="Ma photo : ${esc(MACH[k].n)}">`:machSVG(id)}
 function machSection(id){
@@ -921,6 +970,78 @@ function gymResolve(id,p,used){
   const m=EX[id].m, rk={H:0,C:1,I:2,A:3}, t=rk[EX[id].t];
   return Object.keys(EX).filter(x=>EX[x].m===m&&ok(x)).sort((a,b)=>Math.abs(rk[EX[a].t]-t)-Math.abs(rk[EX[b].t]-t))[0]||null;
 }
+
+/* =========================================================
+   CARTE DES MUSCLES (vue de face + vue de dos)
+   Primaires en couleur pleine, secondaires en couleur atténuée.
+   ========================================================= */
+const MZ={pecs:'Pectoraux',delt_ant:'Deltoïde antérieur',delt_lat:'Deltoïde moyen',delt_post:'Deltoïde postérieur',biceps:'Biceps',avant_bras:'Avant-bras',triceps:'Triceps',
+ abdos:'Grand droit (abdos)',obliques:'Obliques',dorsaux:'Grand dorsal',rhomboides:'Rhomboïdes',trapezes:'Trapèzes',lombaires:'Lombaires',fessiers:'Fessiers',
+ quads:'Quadriceps',ischios:'Ischio-jambiers',adducteurs:'Adducteurs',mollets:'Mollets'};
+/* Formes (moitié gauche, repère 100 × 215 ; miroir automatique) */
+const AN_FRONT={
+ trapezes:'M45 26 Q40 29 35 31 L44 33 Z',
+ delt_ant:'M33 32 Q25 33 23 41 Q24 47 28 49 Q33 43 35 36 Z',
+ delt_lat:'M23 38 Q20 43 21 49 L25 49 Q24 43 25 39 Z',
+ pecs:'M49 34 Q40 32 35 36 Q31 44 34 51 Q41 56 49 53 Z',
+ biceps:'M28 50 Q23 51 22 59 Q22 67 25 71 Q29 66 30 58 Z',
+ avant_bras:'M24 73 Q19 78 18 90 Q18 98 19 102 L23 102 Q27 90 28 76 Z',
+ abdos:'M48.5 56 L44 56 Q42.5 74 44.5 94 L48.5 94 Z',
+ obliques:'M43 57 Q36 60 35 72 Q35 86 39 95 L44 95 Q41.5 76 43 57 Z',
+ quads:'M39 101 Q31 112 32 132 Q34 146 40 152 L46 151 Q48 128 45 106 Z',
+ adducteurs:'M46 106 Q49 114 49 126 L48.5 136 Q46 122 45 108 Z',
+ mollets:'M36 160 Q33 170 35 184 L41 188 Q43 172 41 160 Z',
+};
+const AN_BACK={
+ trapezes:'M50 24 L41 30 Q35 32 34 34 L44 38 L50 60 Z',
+ delt_post:'M34 32 Q26 33 23 41 Q24 47 28 49 Q33 43 36 37 Z',
+ delt_lat:'M23 38 Q20 43 21 49 L25 49 Q24 43 25 39 Z',
+ rhomboides:'M44 39 L49 43 L49 58 L44 52 Q42 45 44 39 Z',
+ dorsaux:'M43 53 Q36 47 33 52 Q33 68 40 84 L48 88 Q47 70 43 53 Z',
+ triceps:'M28 50 Q23 51 22 59 Q22 67 25 71 Q29 66 30 58 Z',
+ avant_bras:'M24 73 Q19 78 18 90 Q18 98 19 102 L23 102 Q27 90 28 76 Z',
+ lombaires:'M48.5 86 L42 84 Q41 92 44 99 L48.5 99 Z',
+ fessiers:'M49 100 Q38 98 33 106 Q32 116 38 120 Q45 122 49 118 Z',
+ ischios:'M35 122 Q32 134 35 150 L46 150 Q48 134 47 122 Z',
+ mollets:'M35 158 Q31 168 34 180 Q38 186 42 182 Q44 170 42 158 Z',
+};
+/* Silhouette de base (moitié gauche) */
+const AN_BASE='M50 22 Q44 22 44 26 Q36 28 30 31 Q22 34 21 44 Q19 54 20 68 Q16 82 16 98 Q15 106 18 110 Q22 110 23 104 Q27 90 29 74 Q31 64 32 58 Q33 78 35 96 Q31 108 31 124 Q31 142 34 154 Q31 168 34 190 Q35 200 33 206 Q38 210 45 208 Q44 198 44 190 Q47 170 46 154 Q48 136 50 118 Z';
+const AN_LINES_F='M44.5 64 L48.5 64 M44.5 72 L48.5 72 M44.5 80 L48.5 80';
+const ANM={
+ _d:{pecs:[['pecs'],['delt_ant','triceps']],dos:[['dorsaux','rhomboides'],['biceps','delt_post','trapezes']],epaules:[['delt_ant','delt_lat'],['triceps','trapezes']],
+  quads:[['quads'],['fessiers','adducteurs']],ischios:[['ischios'],['fessiers','lombaires']],fessiers:[['fessiers'],['ischios','lombaires']],mollets:[['mollets'],[]],
+  biceps:[['biceps'],['avant_bras']],triceps:[['triceps'],[]],abdos:[['abdos'],['obliques']]},
+ squat_barre:[['quads','fessiers'],['adducteurs','lombaires','ischios']],hack_squat:[['quads'],['fessiers','adducteurs']],presse_cuisses:[['quads','fessiers'],['adducteurs','ischios']],
+ leg_ext:[['quads'],[]],fentes_halt:[['quads','fessiers'],['adducteurs','ischios']],rdl_barre:[['ischios','fessiers'],['lombaires','trapezes','avant_bras']],rdl_halt:[['ischios','fessiers'],['lombaires','avant_bras']],
+ hip_thrust:[['fessiers'],['ischios','quads']],leg_curl_assis:[['ischios'],['mollets']],leg_curl_allonge:[['ischios'],['mollets']],
+ dc_barre:[['pecs'],['delt_ant','triceps']],chest_press:[['pecs'],['delt_ant','triceps']],dc_incl_halt:[['pecs','delt_ant'],['triceps']],pec_fly_poulie:[['pecs'],['delt_ant']],pec_deck:[['pecs'],['delt_ant']],
+ dips_assist:[['pecs','triceps'],['delt_ant']],tirage_vertical:[['dorsaux'],['biceps','rhomboides','delt_post']],tractions:[['dorsaux','biceps'],['rhomboides','avant_bras']],
+ rowing_assis_poulie:[['dorsaux','rhomboides'],['trapezes','biceps','delt_post']],rowing_machine:[['dorsaux','rhomboides'],['trapezes','biceps','delt_post']],rowing_barre:[['dorsaux','rhomboides'],['trapezes','lombaires','biceps']],
+ rowing_halt:[['dorsaux','rhomboides'],['biceps','delt_post']],pullover_poulie:[['dorsaux'],['triceps','pecs']],
+ dev_mil_halt:[['delt_ant','delt_lat'],['triceps','trapezes']],shoulder_press_machine:[['delt_ant','delt_lat'],['triceps']],elev_lat_halt:[['delt_lat'],['trapezes']],elev_lat_poulie:[['delt_lat'],['trapezes']],
+ face_pull:[['delt_post','rhomboides'],['trapezes']],reverse_fly:[['delt_post'],['rhomboides','trapezes']],curl_halt:[['biceps'],['avant_bras']],curl_poulie:[['biceps'],['avant_bras']],curl_pupitre:[['biceps'],['avant_bras']],
+ triceps_poulie:[['triceps'],[]],triceps_overhead:[['triceps'],[]],crunch_poulie:[['abdos'],['obliques']],releve_jambes:[['abdos'],['obliques']],mollets_debout:[['mollets'],[]],
+ pompes:[['pecs'],['delt_ant','triceps','abdos']],pompes_declinees:[['pecs','delt_ant'],['triceps']],pompes_diamant:[['triceps'],['pecs','delt_ant']],dc_halt_banc:[['pecs'],['delt_ant','triceps']],
+ ecarte_halt:[['pecs'],['delt_ant']],ecarte_elastique:[['pecs'],['delt_ant']],rowing_inverse:[['dorsaux','rhomboides'],['biceps','delt_post']],rowing_inverse_supi:[['biceps','dorsaux'],['rhomboides']],
+ rowing_elastique:[['dorsaux','rhomboides'],['biceps','delt_post']],tirage_elastique:[['dorsaux'],['biceps','rhomboides']],pullover_elastique:[['dorsaux'],['triceps']],chin_up:[['biceps','dorsaux'],['avant_bras']],
+ pike_pushup:[['delt_ant'],['triceps','trapezes']],kb_press:[['delt_ant','delt_lat'],['triceps']],elev_lat_elastique:[['delt_lat'],['trapezes']],face_pull_elastique:[['delt_post','rhomboides'],['trapezes']],
+ oiseau_halt:[['delt_post'],['rhomboides']],goblet_squat:[['quads','fessiers'],['adducteurs','abdos']],squat_pdc:[['quads','fessiers'],['adducteurs']],fentes_bulg_pdc:[['quads','fessiers'],['adducteurs']],
+ leg_ext_elastique:[['quads'],[]],rdl_unilat_pdc:[['ischios','fessiers'],['lombaires']],kb_swing:[['fessiers','ischios'],['lombaires','abdos']],leg_curl_glisse:[['ischios'],['fessiers']],
+ leg_curl_elastique:[['ischios'],[]],pont_fessier:[['fessiers'],['ischios']],mollets_unilat:[['mollets'],[]],curl_elastique:[['biceps'],['avant_bras']],triceps_elastique:[['triceps'],[]],
+ extension_halt_tete:[['triceps'],[]],dips_chaise:[['triceps'],['pecs','delt_ant']],crunch_sol:[['abdos'],['obliques']],releve_jambes_sol:[['abdos'],['obliques']],
+};
+function musclesOf(id){const r=ANM[id]||ANM._d[EX[id].m]||[[],[]];return {p:r[0],s:r[1]}}
+function anatomySVG(prim,sec,opt){
+  opt=opt||{}; const P=new Set(prim||[]), Sx=new Set(sec||[]);
+  const cls=k=>P.has(k)?'azp':Sx.has(k)?'azs':'azo';
+  const half=(shapes,lines)=>`<path d="${AN_BASE}" class="abase"/>${Object.entries(shapes).map(([k,d])=>`<path d="${d}" class="${cls(k)}"/>`).join('')}${lines?`<path d="${lines}" class="aline"/>`:''}`;
+  const fig=(shapes,lines,x)=>`<g transform="translate(${x} 0)"><circle cx="50" cy="13" r="9.5" class="abase"/>${half(shapes,lines)}<g transform="translate(100 0) scale(-1 1)">${half(shapes,lines)}</g></g>`;
+  return `<svg class="anat" viewBox="0 0 215 ${opt.lbl?226:214}" aria-label="Muscles ciblés">${fig(AN_FRONT,AN_LINES_F,0)}${fig(AN_BACK,'',115)}${opt.lbl?`<text x="50" y="224" class="albl">Face</text><text x="165" y="224" class="albl">Dos</text>`:''}</svg>`;
+}
+function exAnatomy(id,opt){const m=musclesOf(id);return anatomySVG(m.p,m.s,opt)}
+function muscleNames(id){const m=musclesOf(id);return {p:m.p.map(k=>MZ[k]),s:m.s.map(k=>MZ[k])}}
+function dayMuscles(d){const p={},s={};d.ex.forEach(x=>{const m=musclesOf(x.id);m.p.forEach(k=>p[k]=1);m.s.forEach(k=>s[k]=1)});return {p:Object.keys(p),s:Object.keys(s).filter(k=>!p[k])}}
 
 /* ---------- État ---------- */
 function defState(){return{v:1,profile:null,program:null,nextDay:0,history:[],last:{},active:null,cycle:{done:[],skipped:[]},settings:{sound:true,vibe:true}}}
@@ -1234,7 +1355,7 @@ function vOnboard(){
     <div class="appicon">${ic('dumbbell',1)}</div>
     <h1 class="lt">Bienvenue dans<br><span class="tint">Coach Muscu</span></h1>
     <div class="feats">
-      <div class="feat">${ic('sparkles')}<div><b>Programme sur-mesure</b><span>Généré selon ton profil et ton objectif, avec le matériel des salles ON AIR.</span></div></div>
+      <div class="feat">${ic('sparkles')}<div><b>Programme sur-mesure</b><span>Généré selon ton profil et ton objectif, avec le matériel de ta salle ou de chez toi.</span></div></div>
       <div class="feat">${ic('checklist')}<div><b>Séance guidée</b><span>Charge conseillée, séries à cocher et progression visible en un coup d’œil.</span></div></div>
       <div class="feat">${ic('timer')}<div><b>Repos scientifiques</b><span>Un minuteur se lance à chaque série, calé sur la recherche récente.</span></div></div>
     </div>
@@ -1278,7 +1399,7 @@ function vHome(){
      <div class="ready" style="color:${rc}"><i></i>${rl}</div><div class="why">${whyNext(nd)}</div>
      <div class="tmbs">${d.ex.map(x=>`<div class="tmb">${figSVG(x.id)}</div>`).join('')}</div>
      <div class="pills"><span class="pill">${ic((d.place||p.place)==='home'?'house':'dumbbell',1)} ${(d.place||p.place)==='home'?'Maison':'Salle'}</span><span class="pill">${ic('timer')} ≈ ${estDuration(d)} min</span><span class="pill">${d.ex.length} exercices</span><span class="pill">${nSets} séries</span></div>
-     <div class="btnrow"><button class="btn" data-a="start" data-d="${nd}">${ic('play',1)} Commencer</button><button class="btn gray ico" data-a="change" aria-label="Changer de séance">${ic('swap')}</button></div></div>
+     <div class="btnrow"><button class="btn" data-a="start" data-d="${nd}">${ic('play',1)} Commencer</button><button class="btn gray ico" data-a="fiche" data-d="${nd}" aria-label="Fiche de séance">${ic('list')}</button><button class="btn gray ico" data-a="change" aria-label="Changer de séance">${ic('swap')}</button></div></div>
    ${sec('Nutrition',cell({a:'nav',attrs:'data-v="nutrition"',icon:ic('fork',1),bg:'var(--green)',title:NUT().omad?`OMAD · repas à ${fmtH(NUT().meal)}`:`${N.kcal.toLocaleString('fr-FR')} kcal · ${N.prot} g de protéines`,sub:NUT().omad?`${N.kcal.toLocaleString('fr-FR')} kcal et ${N.prot} g de protéines en un repas${NUT().formula==='shake'?' + 1 shaker':''}`:'Objectifs du jour, timing autour de la séance et idées de repas',chev:true}),null,true)}
    ${sec('Temps de repos',
       cell({icon:ic('bolt'),bg:'var(--orange)',title:'Polyarticulaires lourds',sub:'Squat, développé couché, rowing barre, presse',value:'3 min',vcls:'t'})
@@ -1296,6 +1417,50 @@ function sciSheet(){
    ${sec('En pratique',cell({title:'<span class="ct sm">En sèche, on ne raccourcit pas les repos : l’objectif est de garder des charges lourdes. Si ta série suivante chute de plus de 2 reps, ajoute 30 s avec le bouton +15 s.</span>'}))}`,{title:'Science'});
 }
 
+
+/* ---------- Fiche séance (vue tableau imprimable) ---------- */
+const STRETCH={pecs:'Pectoraux : avant-bras contre un encadrement de porte, buste qui avance, 30 s par côté',dorsaux:'Grand dorsal : mains sur un banc, bras tendus, buste qui descend vers le sol, 30 s',
+ rhomboides:'Haut du dos : mains jointes devant, dos arrondi, omoplates écartées, 30 s',trapezes:'Trapèzes : oreille vers l’épaule, 20 s par côté',delt_ant:'Épaules (avant) : mains jointes dans le dos, bras tendus vers le haut, 20 s',
+ delt_lat:'Épaules : bras croisé devant la poitrine, 30 s par côté',delt_post:'Épaules (arrière) : bras croisé devant la poitrine, 30 s par côté',triceps:'Triceps : coude derrière la tête, main entre les omoplates, 30 s',
+ biceps:'Biceps : bras tendu en arrière, paume contre un mur, 30 s',quads:'Quadriceps : debout, talon vers la fesse, 30 s par jambe',ischios:'Ischio-jambiers : talon sur un banc, jambe tendue, buste en avant dos plat, 30 s',
+ fessiers:'Fessiers : assis, cheville sur le genou opposé, buste en avant, 30 s',mollets:'Mollets : mains au mur, jambe arrière tendue, talon au sol, 30 s',abdos:'Abdos : allongé sur le ventre, poussée sur les bras, 20 s',
+ lombaires:'Lombaires : allongé, genoux ramenés vers la poitrine, 30 s',adducteurs:'Adducteurs : assis en papillon, plantes de pieds jointes, 30 s',obliques:'Obliques : debout, bras au-dessus de la tête, inclinaison latérale, 20 s',avant_bras:'Avant-bras : bras tendu, doigts tirés vers soi, 20 s'};
+function ficheImg(x,place){
+  const k=MACH_OF[x.id], ph=k&&phAll()[k];
+  if(place!=='home'&&k&&!EX[x.id].homeOnly) return ph?`<img class="mphoto" src="${ph}" alt="">`:machSVG(x.id,false);
+  return figSVG(x.id);
+}
+function ficheSheet(i){
+  const d=S.program.days[i], p=S.profile, place=d.place||p.place||'gym', dm=dayMuscles(d);
+  const obj=[...new Set(dm.p.map(k=>MZ[k].toLowerCase()))].slice(0,4);
+  const nSet=d.ex.reduce((a,x)=>a+nSets(x),0);
+  const stretches=[...new Set(dm.p.map(k=>STRETCH[k]).filter(Boolean))].slice(0,5);
+  const prev=_placeCtx; _placeCtx=place;
+  const rows=d.ex.map((x,j)=>{const X=EX[x.id], mn=muscleNames(x.id), w=suggest(x.id).w;
+    return `<div class="frow"><span class="fnum">${j+1}</span><div>
+      <div class="ct" style="font-weight:600">${esc(X.n)}</div>
+      <div class="cs">${esc(place==='home'?X.eq:eqOf(x.id))}</div>
+      <div class="fimgs"><div>${ficheImg(x,place)}</div><div>${exAnatomy(x.id)}</div></div>
+      <div>${mn.p.map(n=>`<span class="mtag">${n}</span>`).join('')}${mn.s.map(n=>`<span class="mtag s">${n}</span>`).join('')}</div>
+      <div class="cs" style="margin-top:6px"><b style="color:var(--label)">Technique :</b> ${esc(X.c[0])}. ${esc(X.c[2]||'')}.</div>
+      <div class="fchips"><span><b>${nSets(x)}</b> séries</span><span><b>${x.rmin}–${x.rmax}</b> reps</span><span><b>${restLbl(x.rest)}</b> repos</span>${noLoad(x.id)?`<span>${unitTxt(x.id)}</span>`:`<span><b>${fmtNum(w)}</b> kg</span>`}</div>
+    </div></div>`}).join('');
+  _placeCtx=prev;
+  openSheet(`<div class="fhead"><div class="top"><div class="cap">Fiche séance · ${place==='home'?'À la maison':esc((CHAINS[gymOf().chain]||CHAINS.autre).n)}</div><div class="t2">${esc(d.n)}</div>
+      <div class="sub">Objectif : travailler ${obj.join(', ')} · ${GOALS[p.goal].n.toLowerCase()}.</div></div>
+      <div class="fstats"><div><b>≈ ${estDuration(d)} min</b><span>Durée</span></div><div><b>${LEVELS[p.level]}</b><span>Niveau</span></div><div><b>${nSet} séries</b><span>${d.ex.length} exercices</span></div></div></div>
+   <section class="sec"><div class="sec-h">Muscles travaillés</div><div class="grp"><div class="abox">${anatomySVG(dm.p,dm.s,{lbl:1})}</div>
+     <div class="cell"><span class="cbody"><span>${dm.p.map(k=>`<span class="mtag">${MZ[k]}</span>`).join('')}${dm.s.map(k=>`<span class="mtag s">${MZ[k]}</span>`).join('')}</span></span></div></div></section>
+   ${sec('Conseils généraux',[
+      ['5 min de cardio léger (rameur, vélo) puis mobilité des articulations travaillées','var(--orange)','flame'],
+      ['1 à 2 séries légères (≈ 50 % puis 70 % de la charge) sur le premier exercice','var(--blue)','gauge'],
+      [`Garde ${rir()} répétition(s) en réserve ; exécution contrôlée, descente en 2 s`,'var(--green)','checkCircle'],
+      ['Repos : 3 min sur les gros polyarticulaires, 2 min sur les machines, 90 s en isolation','var(--purple)','timer']
+     ].map(([t,c,i])=>cell({icon:ic(i,1),bg:c,title:`<span class="ct sm">${t}</span>`})).join(''))}
+   <section class="sec"><div class="sec-h">Exercices</div><div class="grp">${rows}</div></section>
+   ${sec('Étirements de fin de séance',stretches.map(t=>`<div class="cell top" style="--inset:52px"><span class="mk g">${ic('checkCircle',1)}</span><span class="cbody"><span class="ct sm">${esc(t)}</span></span></div>`).join(''),'Étirements doux, sans forcer : ils servent au retour au calme, pas à la récupération musculaire.')}
+   <div class="btnwrap"><button class="btn" data-a="start" data-d="${i}">${ic('play',1)} Commencer ${esc(d.n)}</button></div>`,{title:'Fiche séance'});
+}
 /* ---------- Programme ---------- */
 function vProgram(){
   const p=S.profile, days=S.program.days;
@@ -1317,7 +1482,7 @@ function vDay(i){
   const d=S.program.days[i], nd=nextIdx();
   return `<div class="dayhead"><div><div class="t2">${esc(d.n)}</div><div class="sub">${esc(d.f)} · ≈ ${estDuration(d)} min</div></div>${i===nd?'<span class="pill t">Prochaine</span>':''}</div>
    ${sec('',d.ex.map(x=>`<button class="cell ex" data-a="exinfo" data-id="${x.id}" data-d="${i}"><span class="exth">${figSVG(x.id)}</span><span class="cbody"><span class="ct">${esc(EX[x.id].n)}</span><span class="cs">${x.prio?'<span class="tint">Prioritaire</span> · ':''}${x.sets} × ${x.rmin}–${x.rmax} reps · ${restLbl(x.rest)} · ${fmtW(suggest(x.id).w,x.id)}</span></span>${CH}</button>`).join(''))}
-   <div class="btnwrap"><button class="btn" data-a="start" data-d="${i}">${ic('play',1)} Commencer ${esc(d.n)}</button></div>`;
+   <div class="btnwrap"><button class="btn" data-a="start" data-d="${i}">${ic('play',1)} Commencer ${esc(d.n)}</button><button class="btn gray" data-a="fiche" data-d="${i}">${ic('list')} Voir la fiche de séance</button></div>`;
 }
 function volumeByMuscle(){const v={};S.program.days.forEach(d=>d.ex.forEach(x=>{const m=EX[x.id].m;v[m]=(v[m]||0)+x.sets}));return Object.entries(v).sort((a,b)=>b[1]-a[1])}
 
@@ -1359,7 +1524,7 @@ function vProfile(){
      +cell({a:'reset',icon:ic('trash'),bg:'var(--red)',title:'<span style="color:var(--red)">Tout réinitialiser</span>'}),
      'Tes données restent uniquement sur ce téléphone.')}
     <input type="file" id="importFile" accept="application/json,.json" style="display:none">
-    <div class="sec-f center" style="margin-bottom:20px">Coach Muscu · Édition ON AIR</div>`);
+    <div class="sec-f center" style="margin-bottom:20px">Coach Muscu · ${p.place==='home'?'Édition maison':'Édition '+esc((CHAINS[gymOf().chain]||CHAINS.autre).n).replace(/^Autre enseigne$/,'salle')}</div>`);
 }
 
 /* ---------- Mode séance ---------- */
@@ -1381,8 +1546,8 @@ function vWorkout(){
       <div class="exk">Exercice ${A.cur+1} sur ${A.ex.length}${exDone?' · terminé':''}</div>
       <div class="exn">${esc(X.n)}</div>
       <div class="exm">${MUS[X.m]} · ${esc(eqOf(e.id))}</div>
-      ${hasM?`<div class="figseg">${seg('figMode',[['move','Mouvement'],['mach',phAll()[MACH_OF[e.id]]?'Ma machine':'Machine']],figMode,'figMode')}</div>`:''}
-      <div class="figbox" data-a="exinfo" data-id="${e.id}">${hasM&&figMode==='mach'?machVisual(e.id):figSVG(e.id)}</div>
+      <div class="figseg">${seg('figMode',[['move','Mouvement'],...(hasM?[['mach',phAll()[MACH_OF[e.id]]?'Ma machine':'Machine']]:[]),['musc','Muscles']],(!hasM&&figMode==='mach')?'move':figMode,'figMode')}</div>
+      <div class="figbox" data-a="exinfo" data-id="${e.id}">${figMode==='musc'?exAnatomy(e.id,{lbl:1}):(hasM&&figMode==='mach')?machVisual(e.id):figSVG(e.id)}</div>
       <div class="exbtns"><button class="btn gray sm2" data-a="exinfo" data-id="${e.id}">${ic('list')} Technique</button><button class="btn gray sm2" data-a="swap">${ic('swap')} Remplacer</button></div>
     </div>
     <section class="sec"><div class="grp stats4"><div><b>${e.sets.length}</b><span>Séries</span></div><div><b>${e.rmin}–${e.rmax}</b><span>Reps</span></div><div><b>${wDisp}</b><span>${pdc?'Charge':'kg'}</span></div><div><b>${restLbl(e.rest)}</b><span>Repos</span></div></div>
@@ -1507,6 +1672,7 @@ function exInfo(id,di){
   const yt='https://www.youtube.com/results?search_query='+encodeURIComponent(X.n+' exécution technique');
   openSheet(`<div class="pad"><div class="exk">${MUS[X.m]} · ${TYPE[X.t]}</div><div class="exn">${esc(X.n)}</div><div class="exm">${esc(eqOf(id))}</div><div class="figbox">${figSVG(id)}</div></div>
    ${px?`<div class="sec"><div class="grp stats4"><div><b>${nS}</b><span>Séries</span></div><div><b>${px.rmin}–${px.rmax}</b><span>Reps</span></div><div><b>${noLoad(id)?unitTxt(id):fmtNum(suggest(id).w)}</b><span>${noLoad(id)?'Charge':'kg'}</span></div><div><b>${restLbl(px.rest)}</b><span>Repos</span></div></div></div>`:''}
+   ${(()=>{const mn=muscleNames(id);return `<section class="sec"><div class="sec-h">Muscles ciblés</div><div class="grp"><div class="abox">${exAnatomy(id,{lbl:1})}</div><div class="cell"><span class="cbody"><span>${mn.p.map(n=>`<span class="mtag">${n}</span>`).join('')}${mn.s.map(n=>`<span class="mtag s">${n}</span>`).join('')}</span><span class="cs">Vert plein : muscles principaux · vert clair : muscles secondaires</span></span></div></div></section>`})()}
    ${curPlace()!=='home'?machSection(id):''}
    ${sec('Posture parfaite',X.c.map(c=>`<div class="cell top" style="--inset:52px"><span class="mk g">${ic('checkCircle',1)}</span><span class="cbody"><span class="ct sm">${esc(c)}</span></span></div>`).join(''))}
    ${sec('Erreurs à éviter',X.e.map(c=>`<div class="cell top" style="--inset:52px"><span class="mk r">${ic('xcircle')}</span><span class="cbody"><span class="ct sm">${esc(c)}</span></span></div>`).join(''))}
@@ -2066,6 +2232,7 @@ document.addEventListener('click',ev=>{
     case 'chainF': GF.chain=el.dataset.c; haptic(); $('#gymBody').innerHTML=gymBody(); refreshAnims(); break;
     case 'machF': { const k=el.dataset.k, i=GF.noMach.indexOf(k); if(i>=0) GF.noMach.splice(i,1); else GF.noMach.push(k); el.classList.toggle('sel',i>=0); haptic(); break; }
     case 'gymSave': { S.profile.chain=GF.chain; S.profile.noMach=[...GF.noMach]; GF=null; if(S.profile.place!=='home'){S.program=generate(S.profile); ensureCycle(); progDay=null} save(); closeSheet(); render(); toast('Ma salle mise à jour'); break; }
+    case 'fiche': ficheSheet(+el.dataset.d); break;
     case 'figMode': figMode=el.dataset.val; segUpdate(el); haptic(); setTimeout(render,250); break;
     case 'phAdd': { let inp=$('#phFile'); if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.id='phFile';inp.style.display='none';document.body.appendChild(inp)} inp.dataset.k=el.dataset.k; inp.value=''; inp.click(); break; }
     case 'phDel': { const all=phAll(); delete all[el.dataset.k]; phSave(); toast('Photo supprimée','trash'); if(_exCtx) exInfo(_exCtx[0],_exCtx[1]); if(view==='workout') render(); break; }
