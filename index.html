@@ -385,6 +385,19 @@ svg.fig .pd{fill:#48484a}
 .wlbl{font:600 10px var(--font);fill:rgba(235,235,245,.45)}.wlbl.on{fill:var(--tint)}
 button[disabled]{pointer-events:none}
 
+/* ---- Scanner ---- */
+.scan{position:fixed;inset:0;z-index:90;background:#000;animation:fadeIn .25s}
+.scan video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scan-frame{position:absolute;left:10%;right:10%;top:34%;height:24%;border-radius:18px;box-shadow:0 0 0 2000px rgba(0,0,0,.5)}
+.scan-frame i{position:absolute;inset:0;border:3px solid var(--tint);border-radius:18px}
+.scan-frame b{position:absolute;left:8%;right:8%;top:50%;height:2px;background:var(--tint);box-shadow:0 0 12px var(--tint);animation:scanl 1.6s ease-in-out infinite alternate}
+@keyframes scanl{from{transform:translateY(-36px)}to{transform:translateY(36px)}}
+.scan-top{position:absolute;top:calc(var(--st) + 8px);left:8px;right:8px;display:flex}
+.scan-top .tbtn{color:#fff;font-weight:600}
+.scan-bot{position:absolute;left:16px;right:16px;bottom:calc(var(--sb) + 20px);display:grid;gap:12px}
+.scan-msg{text-align:center;color:#fff;font-size:15px;font-weight:600;text-shadow:0 1px 6px rgba(0,0,0,.8);line-height:1.35}
+.scanbtn{width:34px;height:34px;display:grid;place-items:center;color:var(--tint);font-size:22px;flex:none}
+
 /* ---- Transitions ---- */
 @keyframes fadeIn{from{opacity:0}}
 @keyframes pushIn{from{opacity:0;transform:translateX(24%)}}
@@ -1266,6 +1279,7 @@ const SYM = {
  clock:f=>f?`<circle ${FL} cx="12" cy="12" r="10"/><path d="M12 6.8v5.4l3.6 2.1" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round"/>`:`<circle ${ST} cx="12" cy="12" r="9.2"/><path ${ST} d="M12 6.8v5.4l3.6 2.1"/>`,
  person:f=>f?`<circle ${FL} cx="12" cy="12" r="10.2"/><circle fill="#000" fill-opacity=".85" cx="12" cy="9.8" r="3.5"/><path fill="#000" fill-opacity=".85" d="M5.6 18.7c1.6-2.5 3.8-3.7 6.4-3.7s4.8 1.2 6.4 3.7A9.9 9.9 0 0 1 12 22a9.9 9.9 0 0 1-6.4-3.3z"/>`:`<circle ${ST} cx="12" cy="12" r="9.4"/><circle ${ST} cx="12" cy="9.8" r="3.3"/><path ${ST} d="M6 18.5c1.5-2.2 3.6-3.3 6-3.3s4.5 1.1 6 3.3"/>`,
  chev:`<path ${ST} stroke-width="2.6" d="m9 4.5 7.5 7.5L9 19.5"/>`,
+ barcode:`<path ${ST} stroke-width="2" d="M3 7V4.5A1.5 1.5 0 0 1 4.5 3H7M17 3h2.5A1.5 1.5 0 0 1 21 4.5V7M21 17v2.5a1.5 1.5 0 0 1-1.5 1.5H17M7 21H4.5A1.5 1.5 0 0 1 3 19.5V17"/><path ${ST} stroke-width="1.7" d="M7 8v8M10 8v8M12.5 8v8M15 8v8M17 8v8"/>`,
  search:`<circle ${ST} stroke-width="2.2" cx="10.5" cy="10.5" r="6.5"/><path ${ST} stroke-width="2.4" d="m15.5 15.5 5 5"/>`,
  fork:f=>`<g ${ST} stroke-width="${f?2.3:1.8}"><path d="M6.5 3v7.5M4.3 3v5.2a2.2 2.2 0 0 0 4.4 0V3M6.5 10.5V21"/><path d="M17.5 21V3c-2 1.1-3.3 3.5-3.3 7v2.6h3.3"/></g>`,
  forward:`<path ${FL} d="M2.8 6.2v11.6c0 .7.8 1.1 1.4.7L12 13v4.8c0 .7.8 1.1 1.4.7l8.2-5.8a.9.9 0 0 0 0-1.4l-8.2-5.8c-.6-.4-1.4 0-1.4.7V11L4.2 5.5c-.6-.4-1.4 0-1.4.7z"/>`,
@@ -2343,9 +2357,10 @@ function lgBody(){
   }
   const tabs=`<div class="segwrap" style="margin-bottom:12px">${seg('lgTab',[['food','Aliments'],['rx','Recettes'],['off','Produits'],['quick','Rapide']],L.tab,'lgTab')}</div>`;
   let body='';
-  if(L.tab==='food') body=`<div class="srch">${ic('search')}<input id="fdQ" type="search" placeholder="Rechercher un aliment" value="${esc(L.q)}" autocomplete="off"></div><div id="fdList">${fdList()}</div>`;
+  if(L.tab==='food') body=`<div class="srch">${ic('search')}<input id="fdQ" type="search" placeholder="Rechercher un aliment" value="${esc(L.q)}" autocomplete="off"><button class="scanbtn" data-a="scanOpen" aria-label="Scanner un code-barres">${ic('barcode')}</button></div><div id="fdList">${fdList()}</div>`;
   else if(L.tab==='rx'){const list=[...RX,...Object.values(RX_DYN)]; body=sec('Recettes et shakers de l’app',list.map(r=>{const m=rxMac(r);return cell({a:'rxPick',attrs:`data-id="${r.id}"`,icon:`<span class="emo">${r.em}</span>`,bg:'var(--bg4)',title:`<span class="ct sm">${esc(r.n)}</span>`,sub:`${r1(m.kcal)} kcal · P ${r1(m.p)} · G ${r1(m.c)} · L ${r1(m.f)}`,chev:true})}).join(''))}
   else if(L.tab==='off') body=`<div class="srch">${ic('search')}<input id="offQ" type="search" placeholder="Nom du produit, marque ou code-barres" value="${esc(L.offQ)}" autocomplete="off"><button class="tbtn b" data-a="offSearch" ${L.offLoading?'disabled':''}>${L.offLoading?'…':'Chercher'}</button></div>
+     <div class="btnwrap" style="margin-bottom:16px"><button class="btn" data-a="scanOpen">${ic('barcode')} Scanner un code-barres</button></div>
      ${L.offErr?`<div class="empty" style="padding:24px">${esc(L.offErr)}</div>`:''}
      ${L.offLoading?`<div class="empty" style="padding:24px">Recherche en cours…</div>`:L.off?(L.off.length?sec('Résultats Open Food Facts',L.off.map((o,i)=>cell({a:'offPick',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(o.n)}</span>`,sub:`${r1(o.v[0])} kcal / 100 g · P ${fmtNum(+o.v[1].toFixed(1))} · G ${fmtNum(+o.v[2].toFixed(1))} · L ${fmtNum(+o.v[3].toFixed(1))}`,chev:true})).join(''),'Valeurs déclarées sur l’emballage (base collaborative Open Food Facts).'):`<div class="empty" style="padding:24px">Aucun produit trouvé.</div>`):`<div class="sec-f" style="padding:0 20px">Produits du commerce (Open Food Facts). Lance une recherche par nom ou tape les chiffres du code-barres. Nécessite une connexion.</div>`}`;
   else body=sec('Saisie rapide',`<label class="cell"><span class="cbody"><span class="ct">Nom</span></span><input class="cin" id="qkN" placeholder="Restaurant, plat…" style="width:170px;text-align:right"></label>
@@ -2355,16 +2370,65 @@ function lgBody(){
       <label class="cell"><span class="cbody"><span class="ct">Lipides</span><span class="cs">optionnel</span></span><input class="cin" id="qkF" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>`,'Pratique au restaurant : si tu ne connais que les calories, laisse les macros vides.')+`<div class="btnwrap"><button class="btn" data-a="quickAdd">${ic('plus')} Ajouter</button></div>`;
   return mealSeg+tabs+body;
 }
+
+/* ----- Scanner de code-barres (caméra) -----
+   BarcodeDetector natif si disponible (Chrome Android), sinon ZXing chargé à la demande (iPhone). */
+const ZX_URL='https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
+let _zxP=null, _scan=null;
+function loadZX(){ if(window.ZXing) return Promise.resolve(window.ZXing); if(_zxP) return _zxP;
+  _zxP=new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=ZX_URL;sc.async=true;sc.crossOrigin='anonymous';sc.onload=()=>window.ZXing?res(window.ZXing):rej(new Error('net'));sc.onerror=()=>{_zxP=null;rej(new Error('net'))};document.head.appendChild(sc)}); return _zxP }
+function zxReader(ZX){const h=new Map();h.set(ZX.DecodeHintType.POSSIBLE_FORMATS,[ZX.BarcodeFormat.EAN_13,ZX.BarcodeFormat.EAN_8,ZX.BarcodeFormat.UPC_A,ZX.BarcodeFormat.UPC_E]);h.set(ZX.DecodeHintType.TRY_HARDER,true);return new ZX.BrowserMultiFormatReader(h,300)}
+function offMap(p){return {n:(p.product_name_fr||p.product_name||'Produit')+(p.brands?' · '+p.brands.split(',')[0]:''),v:[+p.nutriments['energy-kcal_100g']||0,+p.nutriments.proteins_100g||0,+p.nutriments.carbohydrates_100g||0,+p.nutriments.fat_100g||0],sv:+p.serving_quantity||0}}
+async function openScanner(){
+  if(_scan) return;
+  const ov=document.createElement('div'); ov.className='scan';
+  ov.innerHTML=`<video id="scanV" playsinline muted autoplay></video><div class="scan-frame"><i></i><b></b></div>
+    <div class="scan-top"><button class="tbtn" data-a="scanClose">Annuler</button></div>
+    <div class="scan-bot"><div class="scan-msg" id="scanMsg">Ouverture de la caméra…</div><button class="btn gray" data-a="scanPhoto">${ic('share')} Prendre une photo à la place</button></div>`;
+  document.body.appendChild(ov); _scan={ov,stop:null,done:false};
+  const msg=t=>{const m=$('#scanMsg'); if(m) m.textContent=t};
+  try{
+    const v=$('#scanV');
+    if('BarcodeDetector' in window){
+      const det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e']});
+      const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+      if(!_scan){st.getTracks().forEach(t=>t.stop());return}
+      _scan.stop=()=>st.getTracks().forEach(t=>t.stop()); v.srcObject=st; await v.play(); msg('Place le code-barres dans le cadre');
+      const loop=async()=>{ if(!_scan||_scan.done) return; try{const r=await det.detect(v); if(r.length) return scanFound(r[0].rawValue)}catch(e){} setTimeout(loop,120) }; loop(); return;
+    }
+    const ZX=await loadZX(); if(!_scan) return;
+    const rd=zxReader(ZX); _scan.stop=()=>{try{rd.reset()}catch(e){}};
+    await rd.decodeFromConstraints({video:{facingMode:{ideal:'environment'}},audio:false},v,res=>{ if(res&&_scan&&!_scan.done) scanFound(res.getText()) });
+    msg('Place le code-barres dans le cadre');
+  }catch(e){
+    msg(e&&e.name==='NotAllowedError'?'Accès à la caméra refusé : autorise-le dans Réglages › Safari › Caméra, ou prends une photo.':e&&e.message==='net'?'Scanner indisponible sans connexion.':'Caméra indisponible : prends plutôt une photo du code-barres.');
+  }
+}
+function closeScanner(){ if(!_scan) return; try{_scan.stop&&_scan.stop()}catch(e){} _scan.ov.remove(); _scan=null }
+function scanFound(code){ if(!_scan||_scan.done) return; _scan.done=true; haptic(); vibrate(60); closeScanner(); barcodeLookup(code) }
+async function scanPhotoFile(file){
+  const m=$('#scanMsg'); if(m) m.textContent='Lecture de la photo…';
+  try{ const ZX=await loadZX(), rd=zxReader(ZX), url=URL.createObjectURL(file); const r=await rd.decodeFromImageUrl(url); URL.revokeObjectURL(url); closeScanner(); barcodeLookup(r.getText()) }
+  catch(e){ if(m) m.textContent='Code-barres illisible : rapproche-toi, bien à plat et net, ou vise en direct.'; else toastErr('Code-barres illisible') }
+}
+async function barcodeLookup(code){
+  if(!LG||!$('#lgBody')) logSheet();
+  LG.tab='off'; LG.offQ=code; LG.sel=null; LG.off=null; LG.offLoading=true; LG.offErr=null; lgRefresh();
+  try{ const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,product_name_fr,brands,nutriments,serving_quantity,code`); const j=await r.json(), p=j.product;
+    if(!p||!p.nutriments||p.nutriments['energy-kcal_100g']==null){ LG.off=[]; LG.offErr=`Produit ${code} introuvable ou sans valeurs nutritionnelles : utilise la saisie rapide avec l’étiquette.` }
+    else { const o=offMap(p); LG.off=[o]; LG.sel={kind:'off',name:o.n,v:o.v,qty:o.sv||100,unit:'g'}; toast('Produit trouvé','checkCircle') }
+  }catch(e){ LG.offErr='Recherche impossible pour le moment (connexion).' }
+  LG.offLoading=false; lgRefresh();
+}
 async function offSearch(){
-  const q=(($('#offQ')||{}).value||'').trim(); LG.offQ=q; if(!q) return;
+  const q=(($('#offQ')||{}).value||'').trim(); LG.offQ=q; if(!q) return; if(/^\d{8,14}$/.test(q)) return barcodeLookup(q);
   const wait=6000-(Date.now()-_offLast); if(wait>0){toast(`Patiente ${Math.ceil(wait/1000)} s entre deux recherches`,'timer');return}
   _offLast=Date.now(); LG.offLoading=true; LG.offErr=null; lgRefresh();
   try{
     const F='product_name,product_name_fr,brands,nutriments,serving_quantity,code'; let prods=[];
     if(/^\d{8,14}$/.test(q)){const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${q}.json?fields=${F}`);const j=await r.json();if(j.product)prods=[j.product]}
     else{const r=await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=24&lc=fr&cc=fr&fields=${F}`);const j=await r.json();prods=j.products||[]}
-    LG.off=prods.filter(p=>(p.product_name_fr||p.product_name)&&p.nutriments&&p.nutriments['energy-kcal_100g']!=null).map(p=>({n:(p.product_name_fr||p.product_name)+(p.brands?' · '+p.brands.split(',')[0]:''),
-      v:[+p.nutriments['energy-kcal_100g']||0,+p.nutriments.proteins_100g||0,+p.nutriments.carbohydrates_100g||0,+p.nutriments.fat_100g||0],sv:+p.serving_quantity||0}));
+    LG.off=prods.filter(p=>(p.product_name_fr||p.product_name)&&p.nutriments&&p.nutriments['energy-kcal_100g']!=null).map(offMap);
   }catch(e){LG.offErr='Recherche impossible pour le moment (hors ligne ou service indisponible). Utilise les aliments ou la saisie rapide.'}
   LG.offLoading=false; if(LG) lgRefresh();
 }
@@ -2442,6 +2506,9 @@ document.addEventListener('click',ev=>{
     case 'rxPick': { const r=rxOf(el.dataset.id); LG.sel={kind:'rx',key:r.id,name:r.n,k:1}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'offPick': { const o=LG.off[+el.dataset.i]; LG.sel={kind:'off',name:o.n,v:o.v,qty:o.sv||100,unit:'g'}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'offSearch': offSearch(); break;
+    case 'scanOpen': openScanner(); break;
+    case 'scanClose': closeScanner(); break;
+    case 'scanPhoto': { let inp=$('#scanFile'); if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.setAttribute('capture','environment');inp.id='scanFile';inp.style.display='none';document.body.appendChild(inp)} inp.value=''; inp.click(); break; }
     case 'lgBack': LG.sel=null; lgRefresh(); break;
     case 'lgMeal': LG.meal=el.dataset.val; segUpdate(el); haptic(); break;
     case 'lgTab': { const q=$('#fdQ'); if(q) LG.q=q.value; const o=$('#offQ'); if(o) LG.offQ=o.value; LG.tab=el.dataset.val; segUpdate(el); haptic(); setTimeout(lgRefresh,200); break; }
@@ -2506,6 +2573,7 @@ document.addEventListener('click',ev=>{
 document.addEventListener('input',ev=>{ if(ev.target.id==='fdQ'&&LG){ LG.q=ev.target.value; const l=$('#fdList'); if(l) l.innerHTML=fdList(); } });
 document.addEventListener('keydown',ev=>{ if(ev.key==='Enter'&&ev.target.id==='offQ'){ ev.preventDefault(); ev.target.blur(); offSearch(); } });
 document.addEventListener('change',ev=>{
+  if(ev.target.id==='scanFile'){ const f=ev.target.files[0]; if(f) scanPhotoFile(f); return; }
   if(ev.target.id==='lgExact'&&LG&&LG.sel){ const v=parseFloat(String(ev.target.value).replace(',','.')); if(v>0){LG.sel.qty=Math.round(v);lgRefresh()} return; }
   if(ev.target.id==='phFile'){ const f=ev.target.files[0], k=ev.target.dataset.k; if(!f||!k) return;
     compressImg(f).then(url=>{ phAll()[k]=url; if(phSave()){ toast('Photo enregistrée'); figMode='mach'; if(_exCtx&&$('#sheet').classList.contains('open')) exInfo(_exCtx[0],_exCtx[1]); render(); } }).catch(()=>toastErr('Image illisible')); return; }
