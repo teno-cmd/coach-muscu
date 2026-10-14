@@ -399,6 +399,16 @@ button[disabled]{pointer-events:none}
 .scan-tip{text-align:center;color:rgba(255,255,255,.75);font-size:13px;margin-top:-6px;text-shadow:0 1px 6px rgba(0,0,0,.8)}
 .scanbtn{width:34px;height:34px;display:grid;place-items:center;color:var(--tint);font-size:22px;flex:none}
 
+/* ---- Glisser pour supprimer ---- */
+.swp{position:relative;overflow:hidden;transition:height .3s var(--ease)}
+.swp-act{position:absolute;top:0;bottom:0;right:0;width:100%;display:flex;justify-content:flex-end;background:var(--red)}
+.swp-act button{width:88px;color:#fff;font-weight:600;font-size:15px;text-align:center;transition:width .25s var(--ease)}
+.swp.full .swp-act button{width:100%;text-align:right;padding-right:22px}
+.swp-c{position:relative;z-index:1;background:var(--bg2);transition:transform .35s var(--ease);touch-action:pan-y}
+.sheet .swp-c{background:var(--bg3)}
+.swp.gone .swp-c{opacity:.4}
+.grp>.swp:first-child .cell::before,.mhead+.swp .cell::before{display:none}
+
 /* ---- Transitions ---- */
 @keyframes fadeIn{from{opacity:0}}
 @keyframes pushIn{from{opacity:0;transform:translateX(24%)}}
@@ -1697,7 +1707,7 @@ function closeSheet(){
 function bindSheetDrag(){
   const body=$('#sheetBody'), head=$('#shHead'), sc=$('#shScroll'); let y0=null,dy=0,t0=0,drag=false;
   const ts=e=>{ if(e.currentTarget===sc&&sc.scrollTop>0) return; y0=e.touches[0].clientY; t0=Date.now(); dy=0; drag=false };
-  const tm=e=>{ if(y0==null) return; dy=e.touches[0].clientY-y0;
+  const tm=e=>{ if(y0==null) return; if(SW&&(SW.dir==='h'||(!drag&&Math.abs(e.touches[0].clientX-SW.x0)>Math.abs(e.touches[0].clientY-y0)))) return; dy=e.touches[0].clientY-y0;
     if(!drag){ if(dy>8){drag=true;body.style.transition='none'} else if(dy<-4){y0=null;return} else return }
     if(e.cancelable) e.preventDefault(); body.style.transform=`translateY(${Math.max(0,dy)}px)`; };
   const te=()=>{ if(y0==null) return; y0=null; if(!drag) return; drag=false; body.style.transition='';
@@ -2311,7 +2321,7 @@ function vJournal(){
   const k=curDay(), T=logTot(k), M=macros(S.profile), rem=M.kcal-T.kcal, entries=logOf(k), ML=mealsList(), keys=ML.map(m=>m[0]);
   const C=2*Math.PI*44, pct=Math.min(1,T.kcal/M.kcal);
   const groups=ML.map(([mk,lbl,em])=>{const es=entries.filter(e=>e.meal===mk), tk=es.reduce((a,e)=>a+e.kcal,0);
-    return `<div class="mhead"><span>${em} ${lbl}</span><span>${tk?r1(tk)+' kcal':''}</span></div>${es.map(e=>cell({a:'logItem',attrs:`data-id="${e.id}"`,title:`<span class="ct sm">${esc(e.name)}</span>`,sub:`${esc(e.qty||'')}${e.qty?' · ':''}P ${r1(e.p)} · G ${r1(e.c)} · L ${r1(e.f)}`,value:r1(e.kcal)+' kcal'})).join('')}
+    return `<div class="mhead"><span>${em} ${lbl}</span><span>${tk?r1(tk)+' kcal':''}</span></div>${es.map(e=>swp(cell({a:'logItem',attrs:`data-id="${e.id}"`,title:`<span class="ct sm">${esc(e.name)}</span>`,sub:`${esc(e.qty||'')}${e.qty?' · ':''}P ${r1(e.p)} · G ${r1(e.c)} · L ${r1(e.f)}`,value:r1(e.kcal)+' kcal'}),'log',e.id)).join('')}
       ${cell({a:'logAdd',attrs:`data-m="${mk}"`,icon:ic('plus'),bg:'var(--tint);color:#000',title:'<span class="tint">Ajouter</span>'})}`}).join('');
   const other=entries.filter(e=>!keys.includes(e.meal));
   return `<div class="card jcard">
@@ -2323,20 +2333,65 @@ function vJournal(){
      </div>
      ${macroRow('Protéines',T.p,M.prot,'var(--P)')}${macroRow('Glucides',T.c,M.carb,'var(--G)')}${macroRow('Lipides',T.f,M.fat,'var(--L)')}
    </div>
-   <section class="sec"><div class="grp">${groups}${other.length?`<div class="mhead"><span>Autres</span></div>${other.map(e=>cell({a:'logItem',attrs:`data-id="${e.id}"`,title:esc(e.name),value:r1(e.kcal)+' kcal'})).join('')}`:''}</div>
-     <div class="sec-f">Touche un aliment pour le supprimer ou l’ajouter à nouveau.</div></section>
+   <section class="sec"><div class="grp">${groups}${other.length?`<div class="mhead"><span>Autres</span></div>${other.map(e=>swp(cell({a:'logItem',attrs:`data-id="${e.id}"`,title:esc(e.name),value:r1(e.kcal)+' kcal'}),'log',e.id)).join('')}`:''}</div>
+     <div class="sec-f">Glisse un aliment vers la gauche pour le supprimer, ou touche-le pour l’ajouter à nouveau.</div></section>
    ${sec('7 derniers jours',`<div class="cell" style="display:block">${weekChart(M.kcal)}<div class="cs center">Pointillés : ton objectif de ${M.kcal.toLocaleString('fr-FR')} kcal</div></div>`,null,true)}`;
 }
 /* ----- Feuille d'ajout ----- */
 function logSheet(meal){ LG={meal:meal||defMeal(),tab:'food',q:'',sel:null,off:null,offErr:null,offLoading:false,offQ:''}; openSheet(`<div id="lgBody">${lgBody()}</div>`,{title:'Ajouter'}); setTimeout(()=>{const q=$('#fdQ');if(q)q.focus()},350) }
 function lgRefresh(){const b=$('#lgBody'); if(b) b.innerHTML=lgBody()}
 function recents(){const out=[],seen=new Set();Object.keys(S.log||{}).sort().reverse().forEach(k=>logOf(k).slice().reverse().forEach(e=>{const key=e.name+'|'+(e.qty||'');if(!seen.has(key)&&out.length<8){seen.add(key);out.push(e)}}));return out}
+const swp=(inner,kind,id)=>`<div class="swp" data-del="${kind}" data-id="${esc(id)}"><div class="swp-act"><button data-a="swDel">Supprimer</button></div><div class="swp-c">${inner}</div></div>`;
+const mpCell=(c,o,lbl)=>swp(cell({a:'fdPick',attrs:`data-k="mp_${c}"`,icon:ic('barcode'),bg:'var(--indigo)',title:`<span class="ct sm">${esc(o.n)}${lbl?' <span class="cs">(mon produit)</span>':''}</span>`,sub:`${r1(o.v[0])} kcal / 100 g · P ${fmtNum(+(+o.v[1]).toFixed(1))} · G ${fmtNum(+(+o.v[2]).toFixed(1))} · L ${fmtNum(+(+o.v[3]).toFixed(1))}`,chev:true}),'prod',c);
+function fdRefresh(){const l=$('#fdList'); if(l) l.innerHTML=fdList(); else lgRefresh()}
 function fdList(){
-  const q=norm(LG.q).trim();
-  if(!q){const rc=recents(); return rc.length?sec('Récents',rc.map((e,i)=>cell({a:'recentAdd',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(e.name)}</span>`,sub:esc(e.qty||''),value:r1(e.kcal)+' kcal',right:`<span class="tint" style="font-size:22px">${ic('plus')}</span>`})).join(''),'Un appui l’ajoute directement au repas choisi.'):`<div class="empty" style="padding:30px 30px">Tape le nom d’un aliment : riz, poulet, pomme, pizza…</div>`}
-  const toks=q.split(/\s+/), all={...FOODS,...Object.fromEntries(Object.entries(S.myprod||{}).map(([c,o])=>['mp_'+c,{n:o.n+' (mon produit)',v:o.v,sv:o.sv}]))}, res=Object.entries(all).filter(([k,f])=>toks.every(t=>norm(f.n).includes(t))).slice(0,40);
-  return res.length?sec('',res.map(([k,f])=>cell({a:'fdPick',attrs:`data-k="${k}"`,title:`<span class="ct sm">${esc(f.n)}</span>`,sub:`${f.v[0]} kcal / 100 ${f.u||'g'} · P ${f.v[1]} · G ${f.v[2]} · L ${f.v[3]}`,chev:true})).join('')):`<div class="empty" style="padding:30px">Aucun aliment trouvé. Essaie l’onglet « Produits » ou « Rapide ».</div>`;
+  const L=LG, q=norm(L.q).trim(), mine=Object.entries(S.myprod||{});
+  const err=L.offErr?`<div class="sec-f" style="padding:0 20px 12px;color:var(--orange)">${esc(L.offErr)}</div>`:'';
+  if(!q){
+    const rc=recents();
+    return `${err}<div class="btnwrap" style="margin-bottom:22px"><button class="btn" data-a="scanOpen">${ic('barcode')} Scanner un code-barres</button></div>
+      ${mine.length?sec('Mes produits',mine.map(([c,o])=>mpCell(c,o)).join(''),'Glisse vers la gauche pour supprimer un produit.'):''}
+      ${rc.length?sec('Récents',rc.map((e,i)=>cell({a:'recentAdd',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(e.name)}</span>`,sub:esc(e.qty||''),value:r1(e.kcal)+' kcal',right:`<span class="tint" style="font-size:22px">${ic('plus')}</span>`})).join(''),'Un appui l’ajoute directement au repas choisi.'):''}
+      ${!mine.length&&!rc.length?`<div class="empty" style="padding:24px 30px">Tape un aliment (riz, poulet, pizza…), un produit du commerce, ou scanne un code-barres.</div>`:''}`;
+  }
+  const toks=q.split(/\s+/), hit=n=>toks.every(t=>norm(n).includes(t));
+  const mp=mine.filter(([c,o])=>hit(o.n)), fd=Object.entries(FOODS).filter(([k,f])=>hit(f.n)).slice(0,30);
+  let off;
+  if(/^\d{8,14}$/.test(q)) off=sec('Produits du commerce',cell({a:'offSearch',icon:ic('barcode'),bg:'var(--blue)',title:`Chercher le code-barres ${esc(q)}`,chev:true}));
+  else if(L.offLoading) off=sec('Produits du commerce',cell({icon:ic('clock',1),bg:'var(--gray)',title:'Recherche en cours…',sub:'Open Food Facts'}));
+  else if(L.off&&L.offFor===q) off=L.off.length?sec('Produits du commerce',L.off.map((o,i)=>cell({a:'offPick',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(o.n)}</span>`,sub:`${r1(o.v[0])} kcal / 100 g · P ${fmtNum(+o.v[1].toFixed(1))} · G ${fmtNum(+o.v[2].toFixed(1))} · L ${fmtNum(+o.v[3].toFixed(1))}`,chev:true})).join(''),'Valeurs des étiquettes (base collaborative Open Food Facts).'):sec('Produits du commerce',cell({title:'<span class="cs">Aucun produit trouvé pour cette recherche.</span>'}));
+  else off=sec('Produits du commerce',cell({a:'offSearch',icon:ic('search'),bg:'var(--blue)',title:`<span class="ct sm">Rechercher « ${esc(L.q.trim())} » dans les produits du commerce</span>`,sub:'Marques et produits emballés · Open Food Facts',chev:true}));
+  return `${err}${mp.length?sec('Mes produits',mp.map(([c,o])=>mpCell(c,o)).join('')):''}
+    ${fd.length?sec('Aliments',fd.map(([k,f])=>cell({a:'fdPick',attrs:`data-k="${k}"`,title:`<span class="ct sm">${esc(f.n)}</span>`,sub:`${f.v[0]} kcal / 100 ${f.u||'g'} · P ${f.v[1]} · G ${f.v[2]} · L ${f.v[3]}`,chev:true})).join('')):''}
+    ${off}`;
 }
+/* Aliments similaires (pour remplir un produit absent de la base) */
+const STOPW=new Set(['de','du','des','la','le','les','au','aux','a','en','et','d','l','un','une','bio','nature','surgele','surgelee','surgelees','frais','fraiche','fraiches','sachet','boite','barquette','bocal','pack','marque','x','g','kg','ml','cl','l']);
+const ftoks=s=>norm(s).replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(t=>t.length>1&&!STOPW.has(t)&&!/^\d+$/.test(t)).map(t=>t.replace(/(es|s|x)$/,''));
+function simFoods(name,n=6){
+  const q=ftoks(name); if(!q.length) return [];
+  const pool=[...Object.entries(FOODS).map(([k,f])=>({k,f})),...Object.entries(S.myprod||{}).map(([c,o])=>({k:'mp_'+c,f:{n:o.n,v:o.v}}))];
+  return pool.map(o=>{const ft=ftoks(o.f.n); let sc=0; q.forEach((t,i)=>{const w=i===0?1.5:1; if(ft.includes(t)) sc+=2*w; else if(t.length>=4&&ft.some(x=>x.length>=4&&(x.startsWith(t.slice(0,4))||t.startsWith(x.slice(0,4))))) sc+=w}); return {...o,sc}})
+    .filter(o=>o.sc>0).sort((a,b)=>b.sc-a.sc).slice(0,n);
+}
+function npSimHTML(name){
+  const sims=simFoods(name||'');
+  if(!sims.length) return `<div class="sec-f" style="padding:0 20px 18px">${name&&name.trim()?'Aucun aliment proche trouvé : essaie un autre mot (ex. « champignons », « jambon »), ou l’estimation en ligne.':'Tape le nom du produit pour voir des aliments similaires et remplir les valeurs en un appui.'}</div>`;
+  return sec('Aliments similaires',sims.map(o=>cell({a:'npFill',attrs:`data-k="${o.k}"`,title:`<span class="ct sm">${esc(o.f.n)}</span>`,sub:`${o.f.v[0]} kcal · P ${o.f.v[1]} · G ${o.f.v[2]} · L ${o.f.v[3]} (pour 100 g)`,right:`<span class="tint" style="font-weight:600;font-size:15px">Utiliser</span>`})).join(''),'Un appui remplit les valeurs ci-dessus avec la moyenne de cet aliment.');
+}
+function nfForm(){
+  const L=LG;
+  return `<div class="card alert" style="margin-bottom:14px">${ic('warn')}<div><b style="font-size:15px">Code ${esc(L.nf.code)} absent de la base</b><div class="sub" style="font-size:13px;line-height:18px">Ajoute-le une fois : recopie l’étiquette, ou pars d’un aliment similaire si les valeurs ne sont pas indiquées. Le prochain scan le retrouvera.</div></div></div>
+   ${sec('Nouveau produit (valeurs pour 100 g)',`<label class="cell"><span class="cbody"><span class="ct">Nom</span></span><input class="cin" id="npN" value="${esc(L.nf.n)}" placeholder="Champignons de Paris…" style="width:180px;text-align:right" autocomplete="off"></label>
+    <label class="cell"><span class="cbody"><span class="ct">Calories</span></span><input class="cin" id="npK" type="number" inputmode="decimal" placeholder="0"><span class="unit">kcal</span></label>
+    <label class="cell"><span class="cbody"><span class="ct">Protéines</span></span><input class="cin" id="npP" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
+    <label class="cell"><span class="cbody"><span class="ct">Glucides</span></span><input class="cin" id="npC" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
+    <label class="cell"><span class="cbody"><span class="ct">Lipides</span></span><input class="cin" id="npF" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
+    <label class="cell"><span class="cbody"><span class="ct">Portion habituelle</span><span class="cs">optionnel</span></span><input class="cin" id="npS" type="number" inputmode="decimal" placeholder="100"><span class="unit">g</span></label>`,'<span id="npNote">Recopie le tableau « pour 100 g » de l’emballage, ou utilise une suggestion ci-dessous.</span>')}
+   <div id="npSim">${npSimHTML(L.nf.n)}</div>
+   <div class="btnwrap"><button class="btn" data-a="npSave">Enregistrer dans Mes produits</button><button class="btn gray" data-a="npOnline">${ic('search')} Estimer d’après des produits similaires en ligne</button><button class="btn gray" data-a="nfCancel">Annuler</button></div>`;
+}
+function npSetVals(v,note){[['npK',v[0]],['npP',v[1]],['npC',v[2]],['npF',v[3]]].forEach(([id,x])=>{const e=$('#'+id); if(e) e.value=String(Math.round(x*10)/10)}); const n=$('#npNote'); if(n) n.textContent=note; haptic()}
 function selMac(){
   const s=LG.sel; if(s.kind==='rx'){const r=rxOf(s.key);return rxMac(r,s.k)}
   const v=s.v, g=s.unit==='pc'?s.qty*s.pc[0]:s.qty, f=g/100; return {kcal:v[0]*f,p:v[1]*f,c:v[2]*f,f:v[3]*f,g};
@@ -2356,22 +2411,10 @@ function lgBody(){
        ${s.kind!=='rx'&&s.unit!=='pc'?`<div class="cell"><span class="cbody"><span class="ct sm">Quantité exacte</span></span><input class="cin" id="lgExact" type="number" inputmode="decimal" value="${s.qty}" style="width:90px"><span class="unit">${s.u||'g'}</span></div>`:''}`)}
      <div class="btnwrap"><button class="btn" data-a="lgConfirm">${ic('plus')} Ajouter ${r1(m.kcal)} kcal</button></div>`;
   }
-  const tabs=`<div class="segwrap" style="margin-bottom:12px">${seg('lgTab',[['food','Aliments'],['rx','Recettes'],['off','Produits'],['quick','Rapide']],L.tab,'lgTab')}</div>`;
+  const tabs=`<div class="segwrap" style="margin-bottom:12px">${seg('lgTab',[['food','Aliments & produits'],['rx','Recettes'],['quick','Rapide']],L.tab==='off'?'food':L.tab,'lgTab')}</div>`;
   let body='';
-  if(L.tab==='food') body=`<div class="srch">${ic('search')}<input id="fdQ" type="search" placeholder="Rechercher un aliment" value="${esc(L.q)}" autocomplete="off"><button class="scanbtn" data-a="scanOpen" aria-label="Scanner un code-barres">${ic('barcode')}</button></div><div id="fdList">${fdList()}</div>`;
+  if(L.tab==='food'||L.tab==='off') body=`<div class="srch">${ic('search')}<input id="fdQ" type="search" enterkeyhint="search" placeholder="Aliment, produit ou code-barres" value="${esc(L.q)}" autocomplete="off"><button class="scanbtn" data-a="scanOpen" aria-label="Scanner un code-barres">${ic('barcode')}</button></div>${L.nf?nfForm():''}<div id="fdList">${L.nf?'':fdList()}</div>`;
   else if(L.tab==='rx'){const list=[...RX,...Object.values(RX_DYN)]; body=sec('Recettes et shakers de l’app',list.map(r=>{const m=rxMac(r);return cell({a:'rxPick',attrs:`data-id="${r.id}"`,icon:`<span class="emo">${r.em}</span>`,bg:'var(--bg4)',title:`<span class="ct sm">${esc(r.n)}</span>`,sub:`${r1(m.kcal)} kcal · P ${r1(m.p)} · G ${r1(m.c)} · L ${r1(m.f)}`,chev:true})}).join(''))}
-  else if(L.tab==='off') body=`<div class="srch">${ic('search')}<input id="offQ" type="search" placeholder="Nom du produit, marque ou code-barres" value="${esc(L.offQ)}" autocomplete="off"><button class="tbtn b" data-a="offSearch" ${L.offLoading?'disabled':''}>${L.offLoading?'…':'Chercher'}</button></div>
-     <div class="btnwrap" style="margin-bottom:16px"><button class="btn" data-a="scanOpen">${ic('barcode')} Scanner un code-barres</button></div>
-     ${L.offErr?`<div class="empty" style="padding:24px">${esc(L.offErr)}</div>`:''}
-     ${L.nf?`<div class="card alert" style="margin-bottom:14px">${ic('warn')}<div><b style="font-size:15px">Code ${esc(L.nf.code)} absent de la base</b><div class="sub" style="font-size:13px;line-height:18px">Ajoute-le une fois depuis l’étiquette : la prochaine fois, le scan le retrouvera directement.</div></div></div>
-       ${sec('Nouveau produit (valeurs pour 100 g)',`<label class="cell"><span class="cbody"><span class="ct">Nom</span></span><input class="cin" id="npN" value="${esc(L.nf.n)}" placeholder="Framboises surgelées…" style="width:180px;text-align:right"></label>
-        <label class="cell"><span class="cbody"><span class="ct">Calories</span></span><input class="cin" id="npK" type="number" inputmode="decimal" placeholder="0"><span class="unit">kcal</span></label>
-        <label class="cell"><span class="cbody"><span class="ct">Protéines</span></span><input class="cin" id="npP" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
-        <label class="cell"><span class="cbody"><span class="ct">Glucides</span></span><input class="cin" id="npC" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
-        <label class="cell"><span class="cbody"><span class="ct">Lipides</span></span><input class="cin" id="npF" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
-        <label class="cell"><span class="cbody"><span class="ct">Portion habituelle</span><span class="cs">optionnel</span></span><input class="cin" id="npS" type="number" inputmode="decimal" placeholder="100"><span class="unit">g</span></label>`,'Recopie le tableau « pour 100 g » de l’emballage.')}
-       <div class="btnwrap"><button class="btn" data-a="npSave">Enregistrer dans Mes produits</button></div>`:''}
-     ${L.offLoading?`<div class="empty" style="padding:24px">Recherche en cours…</div>`:L.off?(L.off.length?sec('Résultats Open Food Facts',L.off.map((o,i)=>cell({a:'offPick',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(o.n)}</span>`,sub:`${r1(o.v[0])} kcal / 100 g · P ${fmtNum(+o.v[1].toFixed(1))} · G ${fmtNum(+o.v[2].toFixed(1))} · L ${fmtNum(+o.v[3].toFixed(1))}`,chev:true})).join(''),'Valeurs déclarées sur l’emballage (base collaborative Open Food Facts).'):`<div class="empty" style="padding:24px">Aucun produit trouvé.</div>`):`<div class="sec-f" style="padding:0 20px">Produits du commerce (Open Food Facts). Lance une recherche par nom ou tape les chiffres du code-barres. Nécessite une connexion.</div>`}`;
   else body=sec('Saisie rapide',`<label class="cell"><span class="cbody"><span class="ct">Nom</span></span><input class="cin" id="qkN" placeholder="Restaurant, plat…" style="width:170px;text-align:right"></label>
       <label class="cell"><span class="cbody"><span class="ct">Calories</span></span><input class="cin" id="qkK" type="number" inputmode="numeric" placeholder="0"><span class="unit">kcal</span></label>
       <label class="cell"><span class="cbody"><span class="ct">Protéines</span><span class="cs">optionnel</span></span><input class="cin" id="qkP" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
@@ -2441,29 +2484,48 @@ async function scanPhotoFile(file){
   try{ const ZX=await loadZX(), rd=zxReader(ZX), url=URL.createObjectURL(file); const r=await rd.decodeFromImageUrl(url); URL.revokeObjectURL(url); closeScanner(); barcodeLookup(r.getText()) }
   catch(e){ if(m) m.textContent='Code-barres illisible : rapproche-toi, bien à plat et net, ou vise en direct.'; else toastErr('Code-barres illisible') }
 }
+const OFF_F='product_name,product_name_fr,brands,nutriments,serving_quantity,code';
+async function offFetch(url){ const ac=new AbortController(), to=setTimeout(()=>ac.abort(),12000);
+  try{ const r=await fetch(url,{signal:ac.signal}); if(r.status===429) throw new Error('rate'); if(!r.ok) throw new Error('http'); return await r.json() }
+  catch(e){ throw new Error(e.name==='AbortError'?'slow':e.message==='rate'?'rate':navigator.onLine===false?'offline':'http') } finally{ clearTimeout(to) } }
+const OFF_ERR={rate:'Trop de recherches depuis ton réseau mobile (limite d’Open Food Facts, partagée avec d’autres abonnés). Réessaie dans une minute, en Wi-Fi, ou scanne le code-barres.',slow:'Open Food Facts met trop de temps à répondre. Réessaie dans un instant.',offline:'Pas de connexion : utilise les aliments, tes produits ou la saisie rapide.',http:'Open Food Facts ne répond pas : service saturé, ou limite de recherches atteinte sur ton réseau mobile. Réessaie dans une minute ou en Wi-Fi. Le scan de code-barres reste plus fiable.'};
 async function barcodeLookup(code){
   if(!LG||!$('#lgBody')) logSheet();
-  LG.tab='off'; LG.offQ=code; LG.sel=null; LG.off=null; LG.offErr=null; LG.nf=null;
+  LG.tab='food'; LG.q=''; LG.sel=null; LG.offErr=null; LG.nf=null;
   const mine=(S.myprod||{})[code];
   if(mine){ LG.sel={kind:'off',name:mine.n,v:mine.v,qty:mine.sv||100,unit:'g'}; lgRefresh(); toast('Produit trouvé dans Mes produits','checkCircle'); return }
   LG.offLoading=true; lgRefresh();
-  try{ const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,product_name_fr,brands,nutriments,serving_quantity,code`); const j=await r.json(), p=j.product;
-    if(!p||!p.nutriments||p.nutriments['energy-kcal_100g']==null){ LG.off=null; LG.nf={code,n:p&&(p.product_name_fr||p.product_name)||''} }
-    else { const o=offMap(p); LG.off=[o]; LG.sel={kind:'off',name:o.n,v:o.v,qty:o.sv||100,unit:'g'}; toast('Produit trouvé','checkCircle') }
-  }catch(e){ LG.offErr='Recherche impossible pour le moment (connexion).' }
+  try{ const j=await offFetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${OFF_F}`), p=j.product;
+    if(!p||!p.nutriments||p.nutriments['energy-kcal_100g']==null) LG.nf={code,n:p&&(p.product_name_fr||p.product_name)||''};
+    else { const o=offMap(p); LG.sel={kind:'off',name:o.n,v:o.v,qty:o.sv||100,unit:'g'}; toast('Produit trouvé','checkCircle') }
+  }catch(e){ LG.offErr=OFF_ERR[e.message]||OFF_ERR.http; LG.nf={code,n:''} }
   LG.offLoading=false; lgRefresh();
 }
+async function offSearchRaw(q){
+  const cache=LG._c=LG._c||{}; if(cache[q]) return cache[q];
+  let prods=[];
+  try{ const j=await offFetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=24&lc=fr&cc=fr&fields=${OFF_F}`); prods=j.products||[] }
+  catch(e){ if(e.message==='rate'||e.message==='offline') throw e;
+    const slug=norm(q).trim().replace(/[^a-z0-9]+/g,'-'); const j=await offFetch(`https://world.openfoodfacts.org/api/v2/search?categories_tags_fr=${slug}&countries_tags_fr=france&page_size=24&fields=${OFF_F}`); prods=j.products||[] }
+  const out=prods.filter(p=>(p.product_name_fr||p.product_name||'').trim()&&p.nutriments&&p.nutriments['energy-kcal_100g']!=null).map(offMap);
+  cache[q]=out; return out;
+}
 async function offSearch(){
-  const q=(($('#offQ')||{}).value||'').trim(); LG.offQ=q; if(!q) return; if(/^\d{8,14}$/.test(q)) return barcodeLookup(q);
+  const q=(LG.q||'').trim(); if(!q) return; if(/^\d{8,14}$/.test(q)) return barcodeLookup(q);
+  if(LG._c&&LG._c[q]){LG.off=LG._c[q];LG.offFor=norm(q);fdRefresh();return}
   const wait=6000-(Date.now()-_offLast); if(wait>0){toast(`Patiente ${Math.ceil(wait/1000)} s entre deux recherches`,'timer');return}
-  _offLast=Date.now(); LG.offLoading=true; LG.offErr=null; lgRefresh();
-  try{
-    const F='product_name,product_name_fr,brands,nutriments,serving_quantity,code'; let prods=[];
-    if(/^\d{8,14}$/.test(q)){const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${q}.json?fields=${F}`);const j=await r.json();if(j.product)prods=[j.product]}
-    else{const r=await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=24&lc=fr&cc=fr&fields=${F}`);const j=await r.json();prods=j.products||[]}
-    LG.off=prods.filter(p=>(p.product_name_fr||p.product_name)&&p.nutriments&&p.nutriments['energy-kcal_100g']!=null).map(offMap);
-  }catch(e){LG.offErr='Recherche impossible pour le moment (hors ligne ou service indisponible). Utilise les aliments ou la saisie rapide.'}
-  LG.offLoading=false; if(LG) lgRefresh();
+  _offLast=Date.now(); LG.offLoading=true; LG.offErr=null; fdRefresh();
+  try{ LG.off=await offSearchRaw(q); LG.offFor=norm(q).trim() }catch(e){ LG.offErr=OFF_ERR[e.message]||OFF_ERR.http; LG.off=null }
+  LG.offLoading=false; if(LG) fdRefresh();
+}
+async function npOnline(){
+  const name=(($('#npN')||{}).value||'').trim(); if(!name) return toastErr('Indique d’abord le nom du produit');
+  const wait=6000-(Date.now()-_offLast); if(wait>0){toast(`Patiente ${Math.ceil(wait/1000)} s`,'timer');return}
+  _offLast=Date.now(); const n=$('#npNote'); if(n) n.textContent='Recherche de produits similaires…';
+  try{ const res=(await offSearchRaw(name)).slice(0,15); if(res.length<2) throw new Error('none');
+    const med=i=>{const a=res.map(o=>o.v[i]).sort((x,y)=>x-y), m=a.length>>1; return a.length%2?a[m]:(a[m-1]+a[m])/2};
+    npSetVals([0,1,2,3].map(med),`Estimation : médiane de ${res.length} produits similaires d’Open Food Facts. À vérifier si possible.`);
+  }catch(e){ if(n) n.textContent=e.message==='none'?'Pas assez de produits similaires en ligne : utilise une suggestion ci-dessous ou l’étiquette.':(OFF_ERR[e.message]||OFF_ERR.http) }
 }
 function lgConfirm(){
   const s=LG.sel, m=selMac(); const qty=s.kind==='rx'?`portion ×${fmtNum(s.k)}`:s.unit==='pc'?`${fmtNum(s.qty)} ${s.pc[1]}${s.qty>1?'s':''}`:`${s.qty} ${s.u||'g'}`;
@@ -2471,8 +2533,41 @@ function lgConfirm(){
   const k=r1(m.kcal); closeSheet(); render(); toast(`+${k} kcal ajoutées`);
 }
 
+/* ---------- Glisser pour supprimer (style iOS) ---------- */
+let SW=null, _swBlock=0;
+function swClose(w){ w.classList.remove('open','full'); const c=w.querySelector('.swp-c'); if(c) c.style.transform='' }
+function swDelete(w){
+  const kind=w.dataset.del, id=w.dataset.id; haptic();
+  w.style.height=w.offsetHeight+'px'; void w.offsetHeight; w.classList.add('gone'); w.style.height='0px';
+  setTimeout(()=>{
+    if(kind==='log'){ const k=curDay(); S.log[k]=logOf(k).filter(x=>x.id!==id); save(); render(); toast('Supprimé du journal','trash') }
+    else if(kind==='prod'){ if(S.myprod) delete S.myprod[id]; save(); fdRefresh(); toast('Produit supprimé','trash') }
+  },300);
+}
+document.addEventListener('touchstart',e=>{
+  const c=e.target.closest('.swp-c');
+  document.querySelectorAll('.swp.open').forEach(w=>{ if(!c||w!==c.parentElement) swClose(w) });
+  if(!c) return; const t=e.touches[0];
+  SW={c,w:c.parentElement,x0:t.clientX,y0:t.clientY,dx:0,dir:null,base:c.parentElement.classList.contains('open')?-88:0};
+},{passive:true});
+document.addEventListener('touchmove',e=>{
+  if(!SW) return; const t=e.touches[0], dx=t.clientX-SW.x0, dy=t.clientY-SW.y0;
+  if(!SW.dir){ if(Math.abs(dx)<7&&Math.abs(dy)<7) return; SW.dir=Math.abs(dx)>Math.abs(dy)*1.2?'h':'v'; if(SW.dir==='h'){SW.c.style.transition='none'} }
+  if(SW.dir!=='h') return; if(e.cancelable) e.preventDefault();
+  SW.dx=dx; let x=SW.base+dx; if(x>0) x=x*.25; SW.c.style.transform=`translateX(${x}px)`;
+  const full=x<-SW.w.offsetWidth*.55; if(full!==SW.w.classList.contains('full')){ SW.w.classList.toggle('full',full); if(full) haptic() }
+},{passive:false});
+document.addEventListener('touchend',()=>{
+  if(!SW) return; const s=SW; SW=null; if(s.dir!=='h') return;
+  _swBlock=Date.now(); s.c.style.transition=''; const x=s.base+s.dx;
+  if(x<-s.w.offsetWidth*.55){ s.c.style.transform=`translateX(-${s.w.offsetWidth}px)`; swDelete(s.w); return }
+  if(x<-40){ s.w.classList.add('open'); s.c.style.transform='translateX(-88px)' } else swClose(s.w);
+});
+
 /* ---------- Actions ---------- */
 document.addEventListener('click',ev=>{
+  if(Date.now()-_swBlock<400&&ev.target.closest('.swp-c')){ev.preventDefault();return}
+  const ow=document.querySelector('.swp.open'); if(ow&&!ev.target.closest('.swp-act')){ swClose(ow); if(ev.target.closest('.swp')===ow) return; }
   const el=ev.target.closest('[data-a]'); if(!el) return;
   const a=el.dataset.a, A=S.active;
   switch(a){
@@ -2540,9 +2635,13 @@ document.addEventListener('click',ev=>{
     case 'offPick': { const o=LG.off[+el.dataset.i]; LG.sel={kind:'off',name:o.n,v:o.v,qty:o.sv||100,unit:'g'}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'offSearch': offSearch(); break;
     case 'scanOpen': openScanner(); break;
+    case 'swDel': { const w=el.closest('.swp'); if(w) swDelete(w); break; }
+    case 'npFill': { const k=el.dataset.k, f=k.startsWith('mp_')?(S.myprod||{})[k.slice(3)]:FOODS[k]; if(!f) break; npSetVals(f.v,`Valeurs moyennes de « ${f.n} » (tables Ciqual / USDA). À ajuster si l’emballage indique autre chose.`); const nn=$('#npN'); if(nn&&!nn.value.trim()) nn.value=f.n; break; }
+    case 'npOnline': npOnline(); break;
+    case 'nfCancel': LG.nf=null; LG.offErr=null; lgRefresh(); break;
     case 'npSave': { const v=id=>parseFloat(String(($('#'+id)||{}).value||'').replace(',','.'))||0, k=v('npK'), pp=v('npP'), c=v('npC'), f=v('npF'), sv=v('npS');
       const kc=k||(pp*4+c*4+f*9); if(!kc) return toastErr('Indique au moins les calories pour 100 g');
-      const n=(($('#npN')||{}).value||'').trim()||('Produit '+LG.nf.code); if(!S.myprod) S.myprod={};
+      const n=(($('#npN')||{}).value||'').trim()||('Produit '+LG.nf.code); if(!S.myprod) S.myprod={}; LG.offErr=null;
       S.myprod[LG.nf.code]={n,v:[kc,pp,c,f],sv}; save(); LG.sel={kind:'off',name:n,v:[kc,pp,c,f],qty:sv||100,unit:'g'}; LG.nf=null; lgRefresh(); toast('Ajouté à Mes produits'); break; }
     case 'scanClose': closeScanner(); break;
     case 'scanPhoto': { let inp=$('#scanFile'); if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.setAttribute('capture','environment');inp.id='scanFile';inp.style.display='none';document.body.appendChild(inp)} inp.value=''; inp.click(); break; }
@@ -2607,8 +2706,11 @@ document.addEventListener('click',ev=>{
     case 'reset': actionSheet({title:'Tout réinitialiser ?',msg:'Profil, programme et historique seront effacés de ce téléphone.',actions:[{label:'Effacer toutes les données',style:'destructive',fn:()=>{localStorage.removeItem(KEY);S=defState();F=null;obStep=0;go('onboard')}}]}); break;
   }
 });
-document.addEventListener('input',ev=>{ if(ev.target.id==='fdQ'&&LG){ LG.q=ev.target.value; const l=$('#fdList'); if(l) l.innerHTML=fdList(); } });
-document.addEventListener('keydown',ev=>{ if(ev.key==='Enter'&&ev.target.id==='offQ'){ ev.preventDefault(); ev.target.blur(); offSearch(); } });
+document.addEventListener('input',ev=>{
+  if(ev.target.id==='fdQ'&&LG){ LG.q=ev.target.value; if(LG.nf){LG.nf=null; LG.offErr=null; const b=$('#lgBody'); if(b){b.innerHTML=lgBody(); const q=$('#fdQ'); if(q){q.focus(); q.setSelectionRange(q.value.length,q.value.length)}} return} fdRefresh(); }
+  if(ev.target.id==='npN'){ const z=$('#npSim'); if(z) z.innerHTML=npSimHTML(ev.target.value); }
+});
+document.addEventListener('keydown',ev=>{ if(ev.key==='Enter'&&ev.target.id==='fdQ'&&LG){ ev.preventDefault(); ev.target.blur(); LG.q=ev.target.value; offSearch(); } });
 document.addEventListener('change',ev=>{
   if(ev.target.id==='scanFile'){ const f=ev.target.files[0]; if(f) scanPhotoFile(f); return; }
   if(ev.target.id==='lgExact'&&LG&&LG.sel){ const v=parseFloat(String(ev.target.value).replace(',','.')); if(v>0){LG.sel.qty=Math.round(v);lgRefresh()} return; }
