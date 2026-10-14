@@ -311,6 +311,29 @@ svg.fig .pd{fill:#48484a}
 .alert{display:flex;gap:12px;align-items:flex-start;background:rgba(255,159,10,.12);border:.5px solid rgba(255,159,10,.35)}
 .alert .ic{color:var(--orange);font-size:22px;flex:none;margin-top:1px}
 
+/* ---- Machines ---- */
+.mbox{padding:10px 12px;border-bottom:.5px solid var(--sep);background:radial-gradient(circle at 50% 40%,#1b2210,#161618 72%)}
+.machsvg{display:block;width:100%;height:auto}
+.figbox .machsvg{height:100%}
+.mphoto{display:block;width:100%;height:100%;max-height:340px;object-fit:cover;border-radius:12px}
+.figbox .mphoto{max-height:none}
+.mfr{stroke:#8e8e93;stroke-linecap:round;fill:none}
+.mpdl{stroke:#636366;stroke-linecap:round;fill:none}
+.mpd{fill:#636366}
+.mhd{stroke:var(--tint);stroke-linecap:round;stroke-linejoin:round;fill:none}
+.mhdr{fill:none;stroke:var(--tint);stroke-width:3}
+.mhdf{fill:var(--tint)}
+.mpl{fill:#1c1c1e;stroke:#8e8e93;stroke-width:3}
+.mst{fill:#2c2c2e;stroke:#636366;stroke-width:2}
+.msl{stroke:#48484a;stroke-width:1.5}
+.mpin{fill:var(--tint)}
+.mdot{fill:#636366}
+.mcb{stroke:var(--tint);stroke-dasharray:4 3;stroke-width:1.6;fill:none;opacity:.8}
+.mfl{stroke:#2c2c2e;stroke-width:2}
+.mco circle{fill:var(--tint)}.mco text{font:700 11px var(--round);fill:#000}
+.mnum{width:24px;height:24px;border-radius:50%;background:var(--tint);color:#000;display:grid;place-items:center;font:700 13px var(--round);flex:none;margin-top:-1px}
+.figseg{margin-top:12px}
+
 /* ---- Transitions ---- */
 @keyframes fadeIn{from{opacity:0}}
 @keyframes pushIn{from{opacity:0;transform:translateX(24%)}}
@@ -674,9 +697,9 @@ let _placeCtx=null;
 const curPlace=()=>_placeCtx||(S.active&&S.active.place)||(S.profile&&S.profile.place)||'gym';
 const placeName=pl=>pl==='home'?'À la maison':'En salle';
 function hasEq(id,p){const r=EX[id].req; if(!r) return false; return r.every(tok=>tok.split('|').some(e=>e==='pdc'||(p.equip||[]).includes(e)))}
-function fits(id,p){return p&&p.place==='home'?hasEq(id,p):!EX[id].homeOnly}
+function fits(id,p){return p&&p.place==='home'?hasEq(id,p):!EX[id].homeOnly&&!((p&&p.noMach)||[]).includes(MACH_OF[id])}
 function resolveEx(id,p,used){
-  if(!p||p.place!=='home') return id;
+  if(!p||p.place!=='home') return gymResolve(id,p||{},used);
   for(const c of [...(HOME_ALT[id]||[]),id]) if(EX[c]&&hasEq(c,p)&&!used.has(c)) return c;
   const m=EX[id].m, rk={H:0,C:1,I:2,A:3}, t=rk[EX[id].t], ld=x=>noLoad(x)?1:0;
   const c=Object.keys(EX).filter(x=>EX[x].m===m&&hasEq(x,p)&&!used.has(x)).sort((a,b)=>Math.abs(rk[EX[a].t]-t)-Math.abs(rk[EX[b].t]-t)||ld(a)-ld(b));
@@ -690,7 +713,7 @@ function buildDay(k,p){
   const f=home?'À la maison · '+[...new Set(sel.map(id=>MUS[EX[id].m]))].slice(0,3).join(', '):t.f;
   const prev=_placeCtx; _placeCtx=p.place||'gym';
   const ex=sel.map((id,i)=>prescribe(id,i,p));
-  if(home){
+  if(home||(p.noMach||[]).length){
     /* Compensation du volume : chaque muscle garde au moins autant de séries que la version salle
        (les exercices manquants faute de matériel sont rattrapés par des séries en plus, 5 max par exercice). */
     const gp={...p,place:'gym'}, gids=[], gu=new Set();
@@ -713,7 +736,8 @@ function placeRows(o){
     ${Object.entries(EQUIP).map(([k,q])=>cell({a:'eqF',attrs:`data-e="${k}"`,cls:'goal '+((o.equip||[]).includes(k)?'sel':''),icon:`<span class="emo">${q.em}</span>`,bg:'var(--bg3)',title:q.n,right:`<span class="ck">${ic('check')}</span>`})).join('')}
     ${(o.equip||[]).includes('halt')?`<div class="cell"><span class="cbody"><span class="ct">Haltère le plus lourd</span><span class="cs">Par haltère, pour plafonner les charges</span></span><div class="stp" style="width:132px;flex:none"><button data-a="eqMax" data-k="hmax" data-d="-1" aria-label="Moins">${ic('minus')}</button><span>${o.hmax||20}<small>kg</small></span><button data-a="eqMax" data-k="hmax" data-d="1" aria-label="Plus">${ic('plus')}</button></div></div>`:''}
     ${(o.equip||[]).includes('kettlebell')?`<div class="cell"><span class="cbody"><span class="ct">Kettlebell la plus lourde</span></span><div class="stp" style="width:132px;flex:none"><button data-a="eqMax" data-k="kbmax" data-d="-1" aria-label="Moins">${ic('minus')}</button><span>${o.kbmax||16}<small>kg</small></span><button data-a="eqMax" data-k="kbmax" data-d="1" aria-label="Plus">${ic('plus')}</button></div></div>`:''}
-   </div>`;
+   </div>
+   <div id="gymEq" style="display:${home?'none':'block'}">${cell({a:'gymOpen',icon:ic('target'),bg:'var(--indigo)',title:'Ma salle et ses machines',value:esc((CHAINS[(S.profile&&S.profile.chain)||'onair']||CHAINS.autre).n),chev:true})}</div>`;
 }
 function placeSheet(){
   F={...S.profile,prio:[...(S.profile.prio||[])],equip:[...(S.profile.equip||[])],_sheet:true};
@@ -728,6 +752,174 @@ function refreshPlaceUI(){
 function otherPlaceDay(i){
   const p=S.profile, other=(p.place==='home')?'gym':'home', p2={...p,place:other}, d=S.program.days[i];
   const d2=buildDay(d.k,p2); const pv=_placeCtx; _placeCtx=other; applyPrio([d2],p2); _placeCtx=pv; d2.n=d.n+(other==='home'?' · maison':' · salle'); return d2;
+}
+
+/* =========================================================
+   MACHINES : visuels, repères et réglages
+   - Illustrations génériques dessinées en SVG (aucune photo de marque), avec repères numérotés.
+   - « Ma salle » : enseigne (indication des marques), machines absentes (le programme les évite),
+     et photo perso de chaque machine prise dans TA salle.
+   ========================================================= */
+const MD={
+ l:(x1,y1,x2,y2,w=5,c='mfr')=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${c}" stroke-width="${w}"/>`,
+ r:(x,y,w,h,c='mpd',rx=4)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" class="${c}"/>`,
+ c:(x,y,r,c='mpl')=>`<circle cx="${x}" cy="${y}" r="${r}" class="${c}"/>`,
+ p:(d,c='mcb')=>`<path d="${d}" class="${c}"/>`,
+ stack:(x,y,w,h)=>{let s=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" class="mst"/>`;for(let yy=y+7;yy<y+h;yy+=7)s+=`<line x1="${x+2}" y1="${yy}" x2="${x+w-2}" y2="${yy}" class="msl"/>`;return s+`<circle cx="${x+w-5}" cy="${y+h*.45}" r="2.5" class="mpin"/>`},
+ tower:(x,w=34,top=12)=>MD.l(x,top,x,168,5)+MD.l(x+w,top,x+w,168,5)+MD.l(x,top,x+w,top,5),
+ floor:()=>`<line x1="8" y1="170" x2="232" y2="170" class="mfl"/>`,
+};
+const MACH={
+ presse45:{n:'Presse à cuisses inclinée (45°)',zone:'Espace machines à disques / jambes',look:'Grand chariot qui coulisse sur deux rails en diagonale, siège très incliné en bas et plateforme pour les pieds en haut.',
+  set:['Dossier : bas du dos et fessiers plaqués','Plateforme : pieds largeur de hanches, au milieu','Poignées de sécurité : à déverrouiller avant, verrouiller après','Charge : disques sur les supports du chariot'],pts:[[52,118],[176,62],[110,140],[132,100]],
+  draw:()=>MD.floor()+MD.l(30,168,215,168,5)+MD.l(75,165,205,45,8)+MD.l(95,165,215,60,4)+MD.l(42,110,72,150,15,'mpdl')+MD.l(72,152,104,152,13,'mpdl')+MD.l(62,152,62,168,5)+MD.l(150,52,186,90,9,'mhd')+MD.l(160,92,140,112,5)+MD.c(132,100,13)+MD.l(104,140,116,128,5,'mhd')},
+ hack:{n:'Hack squat / pendulum',zone:'Espace machines à disques / jambes',look:'Rails inclinés avec un dossier qui coulisse, deux coussins d’épaules en haut et une grande plateforme inclinée en bas.',
+  set:['Coussins : épaules bien calées dessous','Plateforme : pieds au milieu, largeur d’épaules','Poignées de sécurité à pivoter pour libérer/bloquer','Charge : disques sur les supports'],pts:[[128,48],[160,150],[100,40],[160,96]],
+  draw:()=>MD.floor()+MD.l(60,168,140,22,8)+MD.l(40,168,200,168,5)+MD.l(80,148,120,74,15,'mpdl')+MD.c(122,60,9,'mpd')+MD.l(118,164,182,148,9,'mhd')+MD.l(112,58,100,44,5,'mhd')+MD.l(132,96,146,96,5)+MD.c(160,96,13)},
+ legext:{n:'Leg extension',zone:'Espace machines guidées',look:'Siège avec dossier, un levier devant les tibias terminé par un boudin, et une pile de plaques à côté.',
+  set:['Dossier réglé pour que le genou soit aligné avec l’axe','Axe de rotation (point coloré) = au niveau du genou','Boudin juste au-dessus des chevilles','Pile : goupille dans la plaque choisie'],pts:[[58,80],[128,108],[150,156],[196,128]],
+  draw:()=>MD.floor()+MD.tower(178)+MD.stack(183,92,24,74)+MD.l(68,52,74,128,13,'mpdl')+MD.l(72,130,124,130,12,'mpdl')+MD.l(96,136,96,168,5)+MD.l(60,168,150,168,5)+MD.c(128,122,5,'mhdf')+MD.l(128,122,136,156,5)+MD.c(137,158,8,'mpd')+MD.p('M128 122 L170 122 L195 30 L195 92')},
+ legcurl_assis:{n:'Leg curl assis',zone:'Espace machines guidées',look:'Comme le leg extension, mais avec un boudin qui bloque le haut des cuisses et un autre derrière les chevilles.',
+  set:['Boudin de cuisse : bien serré au-dessus des genoux','Axe de rotation aligné avec le genou','Boudin derrière les chevilles','Pile : goupille dans la plaque choisie'],pts:[[106,96],[128,108],[150,150],[196,128]],
+  draw:()=>MD.floor()+MD.tower(178)+MD.stack(183,92,24,74)+MD.l(68,52,74,128,13,'mpdl')+MD.l(72,130,124,130,12,'mpdl')+MD.l(96,136,96,168,5)+MD.l(60,168,150,168,5)+MD.l(106,96,106,116,4)+MD.c(106,112,8,'mpd')+MD.c(128,122,5,'mhdf')+MD.l(128,122,138,150,5)+MD.c(140,152,8,'mpd')+MD.p('M128 122 L170 122 L195 30 L195 92')},
+ legcurl_allonge:{n:'Leg curl allongé',zone:'Espace machines guidées',look:'Banc à plat (souvent bombé au niveau des hanches) avec poignées à l’avant et un boudin au bout pour les talons.',
+  set:['Allongé, genoux juste au-delà du bord du banc','Boudin juste au-dessus des talons','Poignées : tiens-toi, hanches plaquées'],pts:[[90,98],[188,96],[46,132]],
+  draw:()=>MD.floor()+MD.l(40,112,160,112,13,'mpdl')+MD.l(95,108,125,104,10,'mpdl')+MD.l(60,118,60,168,5)+MD.l(150,118,150,168,5)+MD.l(40,168,200,168,5)+MD.c(162,112,5,'mhdf')+MD.l(162,112,186,100,5)+MD.c(188,99,8,'mpd')+MD.l(40,118,46,134,5,'mhd')},
+ mollets:{n:'Machine à mollets debout',zone:'Espace machines guidées',look:'Grande colonne avec deux coussins pour les épaules et une petite marche au sol.',
+  set:['Coussins réglés pour avoir les genoux tendus en bas','Marche : seulement l’avant du pied, talons dans le vide','Pile : goupille dans la plaque choisie'],pts:[[100,56],[110,148],[196,126]],
+  draw:()=>MD.floor()+MD.tower(178)+MD.stack(183,92,24,74)+MD.l(175,60,112,60,6)+MD.c(108,62,9,'mpd')+MD.r(92,150,42,14,'mhdr',3)+MD.l(178,150,134,157,5)+MD.p('M175 60 L195 30 L195 92')},
+ chestpress:{n:'Chest press convergente',zone:'Espace machines guidées ou à disques',look:'Siège avec dossier droit et deux bras articulés qui convergent devant la poitrine, poignées verticales.',
+  set:['Siège : poignées à hauteur du bas des pectoraux','Dossier : omoplates plaquées','Poignées convergentes (prise neutre ou pronation)','Charge : disques sur les bras ou pile, selon le modèle'],pts:[[64,150],[52,80],[104,82],[156,70]],
+  draw:()=>MD.floor()+MD.l(62,48,66,128,13,'mpdl')+MD.l(64,130,104,130,12,'mpdl')+MD.l(78,136,78,168,5)+MD.c(78,150,4,'mhdf')+MD.l(50,168,200,168,5)+MD.l(150,168,150,20,6)+MD.l(150,22,112,84,5)+MD.l(112,72,112,96,7,'mhd')+MD.l(150,40,156,70,4)+MD.c(156,70,14)},
+ shoulderpress:{n:'Shoulder press (développé épaules)',zone:'Espace machines guidées ou à disques',look:'Siège à dossier droit, poignées placées à hauteur des épaules qui montent au-dessus de la tête.',
+  set:['Siège : poignées au niveau des épaules au départ','Dossier : dos plaqué','Poignées : coudes sous les poignets','Charge : disques ou pile selon le modèle'],pts:[[64,150],[52,80],[104,44],[156,70]],
+  draw:()=>MD.floor()+MD.l(62,40,66,128,13,'mpdl')+MD.l(64,130,104,130,12,'mpdl')+MD.l(78,136,78,168,5)+MD.c(78,150,4,'mhdf')+MD.l(50,168,200,168,5)+MD.l(150,168,150,20,6)+MD.l(150,22,112,54,5)+MD.l(112,44,112,66,7,'mhd')+MD.l(150,40,156,70,4)+MD.c(156,70,14)},
+ pecdeck:{n:'Pec deck / butterfly',zone:'Espace machines guidées',look:'Siège face à deux bras qui pivotent sur les côtés (poignées ou coussins verticaux). En s’asseyant face au dossier, elle sert aussi pour l’oiseau.',
+  set:['Siège : poignées à hauteur de poitrine','Bras réglables : choisis le point de départ (amplitude)','Pour l’oiseau : assieds-toi face au dossier'],pts:[[120,138],[70,58],[170,108]],
+  draw:()=>MD.floor()+MD.l(120,20,120,40,5)+MD.r(106,40,28,80,'mpd',6)+MD.r(96,124,48,10,'mpd')+MD.l(120,134,120,168,5)+MD.l(70,168,170,168,5)+MD.l(120,26,72,66,5)+MD.l(120,26,168,66,5)+MD.l(70,62,70,98,8,'mhd')+MD.l(170,62,170,98,8,'mhd')},
+ latpull:{n:'Poste de tirage vertical',zone:'Espace machines guidées / poulies',look:'Haute tour avec une longue barre suspendue à un câble, un siège et deux boudins pour bloquer les cuisses.',
+  set:['Barre : prise un peu plus large que les épaules','Boudins : cuisses bloquées, sans écraser','Siège : genoux à 90° sous les boudins','Pile : goupille dans la plaque choisie'],pts:[[64,30],[112,92],[78,130],[196,128]],
+  draw:()=>MD.floor()+MD.tower(178)+MD.stack(183,92,24,74)+MD.l(90,16,180,16,5)+MD.p('M96 16 L96 40 M96 16 L195 16 L195 92')+MD.l(56,42,136,42,5,'mhd')+MD.l(56,42,50,50,5,'mhd')+MD.l(136,42,142,50,5,'mhd')+MD.r(80,124,48,10)+MD.l(104,134,104,168,5)+MD.l(104,100,104,124,4)+MD.c(96,100,7,'mpd')+MD.c(114,100,7,'mpd')+MD.l(60,168,178,168,5)},
+ lowrow:{n:'Rowing assis à la poulie basse',zone:'Zone poulies',look:'Long banc bas face à une tour, avec deux cale-pieds inclinés et un câble qui part au ras du sol.',
+  set:['Assis, genoux légèrement fléchis','Pieds sur les cale-pieds','Poignée triangle (ou barre) clipsée au câble','Pile : goupille dans la plaque choisie'],pts:[[64,118],[180,112],[118,100],[214,128]],
+  draw:()=>MD.floor()+MD.tower(196,30)+MD.stack(200,92,22,74)+MD.r(30,128,130,10)+MD.l(44,138,44,168,5)+MD.l(146,138,146,168,5)+MD.l(170,108,182,150,8)+MD.l(30,168,232,168,5)+MD.p('M118 118 L192 150 L211 150 L211 92')+MD.p('M110 112 L122 112 L116 124 Z','mhd')},
+ isorow:{n:'Rowing iso-latéral (machine à disques)',zone:'Espace machines à disques',look:'Machine avec un support de poitrine, un siège et deux bras indépendants chargés de disques.',
+  set:['Support : poitrine plaquée contre le coussin','Siège : poignées à hauteur des épaules / poitrine','Poignées : prise neutre ou pronation','Charge : disques sur chaque bras'],pts:[[128,60],[74,138],[150,74],[186,96]],
+  draw:()=>MD.floor()+MD.l(118,56,122,112,16,'mpdl')+MD.r(66,126,42,10)+MD.l(86,136,86,168,5)+MD.l(122,112,122,168,5)+MD.l(50,168,210,168,5)+MD.l(180,168,180,24,6)+MD.l(180,26,150,86,5)+MD.l(150,74,150,98,7,'mhd')+MD.l(176,44,186,96,4)+MD.c(186,96,14)},
+ crossover:{n:'Poulies vis-à-vis (cross-over)',zone:'Zone poulies',look:'Deux colonnes face à face, reliées en haut, avec un chariot qui coulisse sur chaque colonne pour régler la hauteur de la poulie.',
+  set:['Chariot réglable en hauteur : bouton ou goupille sur le rail','Accessoire clipsé au mousqueton (poignée, corde, barre)','Une pile par colonne : même charge des deux côtés'],pts:[[188,0],[160,0],[36,126]],
+  draw:(id)=>{const y=(MACH_SET[id]&&MACH_SET[id].h!=null)?MACH_SET[id].h:60;let s=MD.floor()+MD.tower(26,20)+MD.tower(194,20)+MD.l(26,12,214,12,4)+MD.stack(29,104,14,62)+MD.stack(197,104,14,62);
+   for(let yy=26;yy<160;yy+=10)s+=MD.c(52,yy,1.5,'mdot')+MD.c(188,yy,1.5,'mdot');
+   const dy=y>100?-34:30;s+=MD.r(46,y-6,12,12,'mhdr',3)+MD.r(182,y-6,12,12,'mhdr',3)+MD.p(`M52 ${y} L84 ${y+dy} M188 ${y} L156 ${y+dy}`)+MD.c(84,y+dy,4,'mhdf')+MD.c(156,y+dy,4,'mhdf');return s}},
+ preacher:{n:'Curl pupitre (machine)',zone:'Espace machines guidées',look:'Siège face à un pupitre incliné où l’on pose les bras, avec une poignée sur un levier articulé.',
+  set:['Siège : aisselles calées en haut du pupitre','Pupitre : bras posés à plat','Axe du levier aligné avec le coude','Poignée : prise en supination'],pts:[[64,118],[116,90],[140,122],[158,72]],
+  draw:()=>MD.floor()+MD.tower(184,28)+MD.stack(188,92,20,74)+MD.r(56,124,44,10)+MD.l(78,134,78,168,5)+MD.l(110,82,138,112,16,'mpdl')+MD.l(138,112,138,168,5)+MD.c(142,116,5,'mhdf')+MD.l(142,116,154,80,5)+MD.l(148,78,162,78,6,'mhd')+MD.l(50,168,184,168,5)},
+ dips:{n:'Machine tractions / dips assistée',zone:'Espace machines guidées',look:'Grande tour avec poignées de traction en haut, poignées de dips au milieu et une plateforme pour les genoux reliée à la pile.',
+  set:['Poignées de traction (larges, serrées ou neutres)','Poignées de dips au milieu','Plateforme genoux : plus de charge = plus d’aide','Pile : choisis l’assistance'],pts:[[56,22],[104,74],[120,128],[196,128]],
+  draw:()=>MD.floor()+MD.tower(178)+MD.stack(183,92,24,74)+MD.l(80,14,80,168,5)+MD.l(80,16,180,16,5)+MD.l(56,22,80,22,6,'mhd')+MD.l(80,82,114,82,6,'mhd')+MD.r(92,122,52,10)+MD.l(144,127,178,127,4)+MD.l(60,168,178,168,5)+MD.p('M160 127 L195 40 L195 92')},
+ rack:{n:'Cage / rack à squat',zone:'Espace poids libres',look:'Cadre avec montants percés de trous, deux crochets (J-hooks) pour poser la barre et des barres de sécurité horizontales.',
+  set:['Crochets : barre au niveau du haut de la poitrine','Sécurités : juste sous ta position la plus basse','Barre olympique 20 kg + colliers de serrage'],pts:[[78,50],[190,118],[120,50]],
+  draw:()=>{let s=MD.floor()+MD.l(60,14,60,168,6)+MD.l(180,14,180,168,6)+MD.l(60,14,180,14,6)+MD.l(40,168,200,168,5);for(let yy=24;yy<160;yy+=10)s+=MD.c(60,yy,1.5,'mdot')+MD.c(180,yy,1.5,'mdot');
+   return s+MD.p('M60 68 L68 68 L68 60','mhd')+MD.p('M180 68 L172 68 L172 60','mhd')+MD.l(30,64,210,64,5)+MD.c(42,64,16)+MD.c(198,64,16)+MD.l(60,122,180,122,5,'mhd')}},
+ benchflat:{n:'Banc de développé couché',zone:'Espace poids libres',look:'Banc plat fixe avec deux montants et des supports pour la barre au-dessus de la tête.',
+  set:['Allongé : yeux juste sous la barre','Supports : barre décrochée bras presque tendus','Disques bloqués par des colliers'],pts:[[86,108],[158,40],[150,82]],
+  draw:()=>MD.floor()+MD.r(40,118,120,10)+MD.l(60,128,60,168,5)+MD.l(140,128,140,168,5)+MD.l(150,40,150,168,6)+MD.p('M150 58 L160 58 L160 50','mhd')+MD.c(150,56,18)+MD.c(150,56,5,'mhdf')+MD.l(40,168,190,168,5)},
+ benchinc:{n:'Banc réglable (inclinable)',zone:'Espace poids libres',look:'Banc avec un dossier qui se relève par crans et une assise réglable, sur une crémaillère.',
+  set:['Dossier : 30° pour l’incliné, 90° pour le développé épaules','Crémaillère ou goupille sous le dossier','Assise légèrement relevée pour ne pas glisser'],pts:[[150,62],[150,150],[76,112]],
+  draw:()=>MD.floor()+MD.l(110,124,160,62,14,'mpdl')+MD.r(56,120,54,10)+MD.l(70,130,70,168,5)+MD.l(150,130,150,168,5)+MD.l(110,140,170,140,4,'mhd')+[118,128,138,148,158].map(x=>MD.c(x,140,2,'mdot')).join('')+MD.l(132,92,146,140,4)+MD.l(50,168,180,168,5)},
+ benchplain:{n:'Banc plat',zone:'Espace poids libres',look:'Simple banc plat sans montants, à côté des râteliers d’haltères.',
+  set:['Banc stable, posé à plat','Pour le rowing : une main et un genou en appui'],pts:[[100,108],[60,150]],
+  draw:()=>MD.floor()+MD.r(40,118,130,10)+MD.l(60,128,60,168,5)+MD.l(150,128,150,168,5)+MD.l(40,168,190,168,5)},
+ halteres:{n:'Râtelier d’haltères',zone:'Espace poids libres',look:'Étagère à deux niveaux avec les haltères rangés par poids croissant, le poids est inscrit sur chaque haltère.',
+  set:['Haltères rangés par poids croissant (kg inscrits dessus)','Prends-les par paire et repose-les à leur place'],pts:[[40,92],[200,92]],
+  draw:()=>{let s=MD.floor()+MD.l(24,108,216,104,5)+MD.l(24,140,216,136,5)+MD.l(30,108,30,168,5)+MD.l(210,104,210,168,5);
+   [[44,8],[72,9],[100,10],[128,11],[156,12],[184,13]].forEach(([x,r],i)=>{const y=100-i*.6;s+=MD.r(x-r-3,y-r,6,2*r,'mst',2)+MD.r(x+r-3,y-r,6,2*r,'mst',2)+MD.l(x-r,y,x+r,y,3)});
+   [[50,12],[86,13],[122,14],[160,15],[196,15]].forEach(([x,r])=>{const y=132-r*.2;s+=MD.r(x-r-3,y-r,7,2*r,'mst',2)+MD.r(x+r-4,y-r,7,2*r,'mst',2)+MD.l(x-r,y,x+r,y,3)});return s}},
+ barre:{n:'Barre olympique et disques',zone:'Espace poids libres / plateforme',look:'Barre de 2,20 m (20 kg) et disques rangés sur des supports, à charger soi-même. Il existe aussi des barres fixes pré-chargées.',
+  set:['Barre olympique : 20 kg à vide','Colliers de serrage des deux côtés','Barres fixes pré-chargées : poids inscrit au bout'],pts:[[120,128],[200,128],[40,90]],
+  draw:()=>MD.floor()+MD.l(20,150,220,150,5)+MD.c(42,150,18)+MD.c(198,150,18)+MD.c(56,150,13)+MD.c(184,150,13)+MD.l(68,150,68,150,8,'mhd')+MD.l(172,150,172,150,8,'mhd')+MD.l(30,20,30,110,5)+MD.l(30,40,50,40,4)+MD.l(30,72,50,72,4)+MD.c(52,40,12)+MD.c(52,72,14)},
+ chaise:{n:'Chaise romaine (captain’s chair)',zone:'Zone abdos / fonctionnelle',look:'Haut dossier vertical avec deux accoudoirs rembourrés et des poignées au bout, sans assise.',
+  set:['Dos plaqué contre le dossier','Avant-bras sur les appuis, mains sur les poignées'],pts:[[96,70],[160,30]],
+  draw:()=>MD.floor()+MD.r(104,26,18,96,'mpd',6)+MD.l(122,44,176,44,11,'mpdl')+MD.l(176,36,176,52,6,'mhd')+MD.l(112,122,112,168,5)+MD.l(170,52,170,168,5)+MD.l(90,168,190,168,5)+MD.l(112,100,170,100,4)},
+ hipthrust:{n:'Banc + barre pour hip thrust',zone:'Espace poids libres',look:'Banc bas (environ 40 cm) contre lequel on appuie le haut du dos, barre chargée posée sur les hanches avec une mousse.',
+  set:['Bord du banc sous les omoplates','Mousse autour de la barre (protège les hanches)','Disques de diamètre standard pour faire rouler la barre'],pts:[[70,100],[150,118],[184,150]],
+  draw:()=>MD.floor()+MD.r(40,108,70,12)+MD.l(50,120,50,168,5)+MD.l(100,120,100,168,5)+MD.l(110,150,230,150,5)+MD.c(176,150,18)+MD.r(140,140,24,14,'mhdr',6)+MD.l(30,168,215,168,5)},
+};
+/* Réglages spécifiques à l'exercice (h = hauteur du chariot pour les poulies) */
+const MACH_SET={
+ pec_fly_poulie:{h:62,t:'Poulies à hauteur d’épaules, une poignée de chaque côté'},
+ elev_lat_poulie:{h:150,t:'Poulie tout en bas, une seule poignée, côté opposé au bras qui travaille'},
+ face_pull:{h:52,t:'Poulie à hauteur du visage, avec la corde'},
+ pullover_poulie:{h:22,t:'Poulie tout en haut, barre droite ou corde'},
+ curl_poulie:{h:150,t:'Poulie tout en bas, barre droite ou EZ'},
+ triceps_poulie:{h:22,t:'Poulie tout en haut, avec la corde'},
+ triceps_overhead:{h:110,t:'Poulie à mi-hauteur ou en bas, corde, dos à la machine'},
+ crunch_poulie:{h:22,t:'Poulie tout en haut, corde, à genoux face à la machine'},
+ reverse_fly:{t:'Assis face au dossier, bras de la machine réglés en position avant'},
+ tractions:{t:'Poignées de traction en haut ; plateforme genoux pour l’assistance'},
+ dips_assist:{t:'Poignées de dips au milieu ; plateforme genoux pour l’assistance'},
+ dc_incl_halt:{t:'Dossier réglé sur le 2e cran (environ 30°)'},
+ dev_mil_halt:{t:'Dossier à la verticale (90°)'},
+ rowing_halt:{t:'Une main et un genou sur le banc, l’autre pied au sol'},
+ fentes_halt:{t:'Pied arrière posé sur le banc'},
+};
+const MACH_OF={squat_barre:'rack',hack_squat:'hack',presse_cuisses:'presse45',leg_ext:'legext',leg_curl_assis:'legcurl_assis',leg_curl_allonge:'legcurl_allonge',mollets_debout:'mollets',
+ dc_barre:'benchflat',chest_press:'chestpress',dc_incl_halt:'benchinc',pec_fly_poulie:'crossover',pec_deck:'pecdeck',dips_assist:'dips',tirage_vertical:'latpull',tractions:'dips',
+ rowing_assis_poulie:'lowrow',rowing_machine:'isorow',rowing_barre:'barre',rowing_halt:'benchplain',pullover_poulie:'crossover',dev_mil_halt:'benchinc',shoulder_press_machine:'shoulderpress',
+ elev_lat_halt:'halteres',elev_lat_poulie:'crossover',face_pull:'crossover',reverse_fly:'pecdeck',rdl_barre:'barre',rdl_halt:'halteres',fentes_halt:'benchplain',hip_thrust:'hipthrust',
+ curl_halt:'halteres',curl_poulie:'crossover',curl_pupitre:'preacher',triceps_poulie:'crossover',triceps_overhead:'crossover',crunch_poulie:'crossover',releve_jambes:'chaise'};
+/* Enseignes : seules les marques documentées publiquement sont indiquées. */
+const CHAINS={
+ onair:{n:'ON AIR Fitness',brands:'Technogym (machines guidées), Hammer Strength (machines à disques), Gym80, et Panatta dans les plus grands clubs'},
+ basicfit:{n:'Basic-Fit',brands:'Matrix (équipementier annoncé pour tous les clubs Basic-Fit)'},
+ fitnesspark:{n:'Fitness Park'},keepcool:{n:'Keepcool'},orangebleue:{n:'L’Orange Bleue'},indep:{n:'Salle indépendante'},autre:{n:'Autre enseigne'},
+};
+const BRAND_RX=/Hammer Strength|Panatta|Technogym|Gym ?80/;
+function gymOf(){const p=S.profile||{};return {chain:p.chain||'onair',noMach:p.noMach||[]}}
+function eqOf(id){const X=EX[id],k=MACH_OF[id];if(k&&gymOf().chain!=='onair'&&BRAND_RX.test(X.eq))return MACH[k].n;return X.eq}
+/* Photos perso (compressées, stockées sur le téléphone) */
+let GF=null, figMode='move', _exCtx=null;
+const PH_KEY=KEY+'_photos'; let _ph=null;
+function phAll(){if(_ph) return _ph; try{_ph=JSON.parse(localStorage.getItem(PH_KEY))||{}}catch(e){_ph={}} return _ph}
+function phSave(){try{localStorage.setItem(PH_KEY,JSON.stringify(_ph||{}));return true}catch(e){toastErr('Mémoire du téléphone pleine pour les photos');return false}}
+function compressImg(file,max=720,q=.72){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',q))};im.onerror=rej;im.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
+function machSVG(id,num=true){
+  const k=MACH_OF[id], M=MACH[k]; if(!M) return '';
+  const pts=M.pts.map(([x,y],i)=>{ if(k==='crossover'){const h=(MACH_SET[id]&&MACH_SET[id].h!=null)?MACH_SET[id].h:60; if(i===0){x=210;y=h} if(i===1){x=170;y=h>100?h-48:h+40}} return num?`<g class="mco"><circle cx="${x}" cy="${y}" r="9"/><text x="${x}" y="${y+4}" text-anchor="middle">${i+1}</text></g>`:''}).join('');
+  return `<svg class="machsvg" viewBox="0 0 240 180" aria-label="${esc(M.n)}">${M.draw(id)}${pts}</svg>`;
+}
+function machVisual(id){const k=MACH_OF[id], ph=phAll()[k]; return ph?`<img class="mphoto" src="${ph}" alt="Ma photo : ${esc(MACH[k].n)}">`:machSVG(id)}
+function machSection(id){
+  const k=MACH_OF[id], M=MACH[k]; if(!M) return '';
+  const g=gymOf(), C=CHAINS[g.chain]||CHAINS.autre, ph=phAll()[k], st=MACH_SET[id];
+  return `<section class="sec"><div class="sec-h">Repérer la machine</div><div class="grp">
+    <div class="mbox">${machSVG(id)}</div>
+    ${ph?`<div class="mbox"><img class="mphoto" src="${ph}" alt="Ma photo"></div>`:''}
+    ${cell({icon:ic('target'),bg:'var(--teal)',title:esc(M.n),sub:`${esc(M.zone)}${C.brands?`<br>Chez ${esc(C.n)} : ${esc(C.brands)}`:''}`})}
+    ${cell({icon:ic('info'),bg:'var(--blue)',title:'<span class="ct sm">'+esc(M.look)+'</span>'})}
+    ${M.set.map((t,i)=>`<div class="cell top" style="--inset:54px"><span class="mnum">${i+1}</span><span class="cbody"><span class="ct sm">${esc(t)}</span></span></div>`).join('')}
+    ${st&&st.t?cell({icon:ic('checkCircle',1),bg:'var(--green)',title:'<span class="ct sm">Pour cet exercice : '+esc(st.t)+'</span>'}):''}
+    ${cell({a:'phAdd',attrs:`data-k="${k}"`,icon:ic('share'),bg:'var(--indigo)',title:ph?'Remplacer ma photo':'Ajouter une photo de ma machine',sub:ph?'Ta photo apparaît pendant la séance':'Prends la machine de ta salle en photo pour la retrouver en un coup d’œil',chev:true})}
+    ${ph?cell({a:'phDel',attrs:`data-k="${k}"`,icon:ic('trash'),bg:'var(--red)',title:'<span style="color:var(--red)">Supprimer ma photo</span>'}):''}
+  </div><div class="sec-f">Schéma générique : selon la marque, la forme exacte varie mais les réglages restent les mêmes.</div></section>`;
+}
+function gymSheet(){
+  const g=gymOf(), used=new Set(Object.values(MACH_OF)), keys=Object.keys(MACH).filter(k=>used.has(k)), ph=phAll();
+  GF={chain:g.chain,noMach:[...g.noMach]};
+  openSheet(`<div id="gymBody">${gymBody(keys,ph)}</div><div class="btnwrap"><button class="btn" data-a="gymSave">Appliquer au programme</button></div>`,{title:'Ma salle'});
+}
+function gymBody(keys,ph){
+  keys=keys||Object.keys(MACH).filter(k=>new Set(Object.values(MACH_OF)).has(k)); ph=ph||phAll();
+  return `<div class="pad"><div class="t2">Ma salle</div><div class="sub">L’enseigne sert à t’indiquer les marques probables. Pour être précis, décoche les machines absentes de TON club : le programme les remplace automatiquement.</div></div>
+   ${sec('Enseigne',Object.entries(CHAINS).map(([k,c])=>cell({a:'chainF',attrs:`data-c="${k}"`,cls:'goal '+(GF.chain===k?'sel':''),title:c.n,sub:c.brands?esc(c.brands):'Marques variables selon les clubs',right:`<span class="ck">${ic('check')}</span>`})).join(''))}
+   ${sec('Machines disponibles dans mon club',keys.map(k=>`<button class="cell goal ${GF.noMach.includes(k)?'':'sel'}" data-a="machF" data-k="${k}" style="--inset:86px"><span class="exth">${machSVG(Object.keys(MACH_OF).find(i=>MACH_OF[i]===k),false)}</span><span class="cbody"><span class="ct sm">${esc(MACH[k].n)}</span><span class="cs">${esc(MACH[k].zone)}${ph[k]?' · 📷 photo':''}</span></span><span class="ck">${ic('check')}</span></button>`).join(''),'Coche = disponible. Ton historique et tes charges sont conservés.')}`;
+}
+function gymResolve(id,p,used){
+  const no=p.noMach||[]; if(!no.includes(MACH_OF[id])) return id;
+  const ok=x=>EX[x]&&!EX[x].homeOnly&&!no.includes(MACH_OF[x])&&!used.has(x);
+  for(const c of (HOME_ALT[id]||[])) if(ok(c)) return c;
+  const m=EX[id].m, rk={H:0,C:1,I:2,A:3}, t=rk[EX[id].t];
+  return Object.keys(EX).filter(x=>EX[x].m===m&&ok(x)).sort((a,b)=>Math.abs(rk[EX[a].t]-t)-Math.abs(rk[EX[b].t]-t))[0]||null;
 }
 
 /* ---------- État ---------- */
@@ -1116,7 +1308,7 @@ function vProgram(){
     ${sec('Planning à venir',q.map((i,k)=>{const d=days[i],[lb]=readyBadge(readiness(d,rec));return cell({a:'progJump',attrs:`data-i="${i}"`,icon:`<b style="color:${k?'#fff':'#000'}">${k+1}</b>`,bg:k?'var(--bg4)':'var(--tint)',title:esc(d.n),sub:k?esc(d.f):`Prochaine · ${lb}`,chev:true})}).join('')
       +cell({a:'change',icon:ic('swap'),bg:'var(--blue)',title:'Changer, remplacer ou sauter',sub:'Autre séance, séance rappel ciblée ou séance sautée',chev:true}),
       `${S.cycle.done.length} sur ${days.length} séances faites dans ce cycle. L’ordre s’adapte à ta récupération (48 à 72 h par muscle), évite d’enchaîner les mêmes muscles et rattrape le volume en retard.`,true)}
-    ${sec('Lieu d’entraînement',cell({a:'placeOpen',icon:ic(p.place==='home'?'house':'dumbbell',1),bg:'var(--teal)',title:placeName(p.place),sub:p.place==='home'?equipSummary(p):'Machines et matériel des salles ON AIR',chev:true}),'Modifiable à tout moment : les exercices sont remplacés en gardant les mêmes muscles. Tu peux aussi changer de lieu pour une seule séance depuis « Changer de séance ».',true)}
+    ${sec('Lieu d’entraînement',cell({a:'placeOpen',icon:ic(p.place==='home'?'house':'dumbbell',1),bg:'var(--teal)',title:placeName(p.place),sub:p.place==='home'?equipSummary(p):'Salle · '+(CHAINS[gymOf().chain]||CHAINS.autre).n,chev:true})+(p.place==='home'?'':cell({a:'gymOpen',icon:ic('target'),bg:'var(--indigo)',title:'Ma salle et ses machines',sub:gymOf().noMach.length?gymOf().noMach.length+' machine(s) indisponible(s) remplacée(s)':'Toutes les machines disponibles · photos perso',chev:true})),'Modifiable à tout moment : les exercices sont remplacés en gardant les mêmes muscles. Tu peux aussi changer de lieu pour une seule séance depuis « Changer de séance ».',true)}
     ${sec('Priorités',cell({a:'prio',icon:ic('target'),bg:'var(--purple)',title:'Muscles prioritaires',value:(p.prio&&p.prio.length)?p.prio.map(g=>PRIO[g].n).join(', '):'Aucun',chev:true}),'Modifiable à tout moment : le programme est régénéré sans perdre ton historique.',true)}
     ${sec('Volume hebdomadaire',vol.map(([m,n])=>`<div class="cell"><span class="ct" style="width:96px;flex:none">${MUS[m]}</span><span class="vbar"><i class="${n<10?'low':''}" style="width:${n/mx*100}%"></i></span><span class="cv" style="width:26px;text-align:right">${n}</span></div>`).join(''),
       'Séries directes par semaine. Repère : 10 à 20 séries par muscle pour l’hypertrophie. Les muscles en orange reçoivent aussi du volume indirect (triceps au développé, biceps au tirage…).',true)}`);
@@ -1173,7 +1365,7 @@ function vProfile(){
 /* ---------- Mode séance ---------- */
 const openIdx=e=>e.sets.findIndex(s=>!s.done);
 function vWorkout(){
-  const A=S.active, e=A.ex[A.cur], X=EX[e.id], ci=openIdx(e), pdc=noLoad(e.id), UT=unitTxt(e.id);
+  const A=S.active, e=A.ex[A.cur], X=EX[e.id], ci=openIdx(e), pdc=noLoad(e.id), UT=unitTxt(e.id), hasM=!!MACH_OF[e.id]&&(A.place||'gym')==='gym';
   const tot=A.ex.reduce((a,x)=>a+x.sets.length,0), dn=A.ex.reduce((a,x)=>a+x.sets.filter(s=>s.done).length,0);
   const allDone=dn===tot, exDone=ci<0, L=S.last[e.id];
   let cta;
@@ -1188,8 +1380,9 @@ function vWorkout(){
     <div class="excard" id="exCard">
       <div class="exk">Exercice ${A.cur+1} sur ${A.ex.length}${exDone?' · terminé':''}</div>
       <div class="exn">${esc(X.n)}</div>
-      <div class="exm">${MUS[X.m]} · ${esc(X.eq)}</div>
-      <div class="figbox" data-a="exinfo" data-id="${e.id}">${figSVG(e.id)}</div>
+      <div class="exm">${MUS[X.m]} · ${esc(eqOf(e.id))}</div>
+      ${hasM?`<div class="figseg">${seg('figMode',[['move','Mouvement'],['mach',phAll()[MACH_OF[e.id]]?'Ma machine':'Machine']],figMode,'figMode')}</div>`:''}
+      <div class="figbox" data-a="exinfo" data-id="${e.id}">${hasM&&figMode==='mach'?machVisual(e.id):figSVG(e.id)}</div>
       <div class="exbtns"><button class="btn gray sm2" data-a="exinfo" data-id="${e.id}">${ic('list')} Technique</button><button class="btn gray sm2" data-a="swap">${ic('swap')} Remplacer</button></div>
     </div>
     <section class="sec"><div class="grp stats4"><div><b>${e.sets.length}</b><span>Séries</span></div><div><b>${e.rmin}–${e.rmax}</b><span>Reps</span></div><div><b>${wDisp}</b><span>${pdc?'Charge':'kg'}</span></div><div><b>${restLbl(e.rest)}</b><span>Repos</span></div></div>
@@ -1308,21 +1501,22 @@ function actionSheet(o){
   });
 }
 function exInfo(id,di){
-  const X=EX[id];
+  const X=EX[id]; _exCtx=[id,di];
   const px=di!=null?S.program.days[di].ex.find(x=>x.id===id):(S.active?S.active.ex.find(x=>x.id===id):null);
   const nS=px?(Array.isArray(px.sets)?px.sets.length:px.sets):0;
   const yt='https://www.youtube.com/results?search_query='+encodeURIComponent(X.n+' exécution technique');
-  openSheet(`<div class="pad"><div class="exk">${MUS[X.m]} · ${TYPE[X.t]}</div><div class="exn">${esc(X.n)}</div><div class="exm">${esc(X.eq)}</div><div class="figbox">${figSVG(id)}</div></div>
+  openSheet(`<div class="pad"><div class="exk">${MUS[X.m]} · ${TYPE[X.t]}</div><div class="exn">${esc(X.n)}</div><div class="exm">${esc(eqOf(id))}</div><div class="figbox">${figSVG(id)}</div></div>
    ${px?`<div class="sec"><div class="grp stats4"><div><b>${nS}</b><span>Séries</span></div><div><b>${px.rmin}–${px.rmax}</b><span>Reps</span></div><div><b>${noLoad(id)?unitTxt(id):fmtNum(suggest(id).w)}</b><span>${noLoad(id)?'Charge':'kg'}</span></div><div><b>${restLbl(px.rest)}</b><span>Repos</span></div></div></div>`:''}
+   ${curPlace()!=='home'?machSection(id):''}
    ${sec('Posture parfaite',X.c.map(c=>`<div class="cell top" style="--inset:52px"><span class="mk g">${ic('checkCircle',1)}</span><span class="cbody"><span class="ct sm">${esc(c)}</span></span></div>`).join(''))}
    ${sec('Erreurs à éviter',X.e.map(c=>`<div class="cell top" style="--inset:52px"><span class="mk r">${ic('xcircle')}</span><span class="cbody"><span class="ct sm">${esc(c)}</span></span></div>`).join(''))}
    <div class="btnwrap"><a class="btn gray" href="${yt}" target="_blank" rel="noopener">${ic('play',1)} Voir des démos vidéo</a>${di!=null?`<button class="btn" data-a="start" data-d="${di}">Commencer ${esc(S.program.days[di].n)}</button>`:''}</div>`,{title:'Technique'});
 }
 function swapSheet(){
   const A=S.active, e=A.ex[A.cur], m=EX[e.id].m, used=A.ex.map(x=>x.id), pl=A.place||'gym', pp={...S.profile,place:pl};
-  const alts=Object.keys(EX).filter(id=>EX[id].m===m&&!used.includes(id)&&(pl==='home'?hasEq(id,pp):true)).sort((a,b)=>(EX[a].homeOnly?1:0)-(EX[b].homeOnly?1:0));
+  const alts=Object.keys(EX).filter(id=>EX[id].m===m&&!used.includes(id)&&(pl==='home'?hasEq(id,pp):!(S.profile.noMach||[]).includes(MACH_OF[id]))).sort((a,b)=>(EX[a].homeOnly?1:0)-(EX[b].homeOnly?1:0));
   openSheet(`<div class="pad"><div class="t2">Remplacer « ${esc(EX[e.id].n)} »</div><div class="sub">${pl==='home'?'Choisis une alternative compatible avec ton matériel':'Machine occupée ou absente dans ton club ? Choisis une alternative'} pour les ${MUS[m].toLowerCase()}.</div></div>
-   ${alts.length?sec('Alternatives',alts.map(id=>`<button class="cell ex" data-a="doSwap" data-id="${id}"><span class="exth">${figSVG(id)}</span><span class="cbody"><span class="ct">${esc(EX[id].n)}</span><span class="cs">${esc(EX[id].eq)}</span></span>${CH}</button>`).join('')):'<div class="empty">Aucune alternative disponible.</div>'}`,{title:'Remplacer'});
+   ${alts.length?sec('Alternatives',alts.map(id=>`<button class="cell ex" data-a="doSwap" data-id="${id}"><span class="exth">${figSVG(id)}</span><span class="cbody"><span class="ct">${esc(EX[id].n)}</span><span class="cs">${esc(eqOf(id))}</span></span>${CH}</button>`).join('')):'<div class="empty">Aucune alternative disponible.</div>'}`,{title:'Remplacer'});
 }
 
 /* ---------- Minuteur ---------- */
@@ -1847,7 +2041,7 @@ document.addEventListener('click',ev=>{
       readForm(); let v=el.dataset.val; if(el.dataset.k==='days') v=+v; F[el.dataset.k]=v; haptic();
       if(!segUpdate(el)) document.querySelectorAll(`[data-a="setF"][data-k="${el.dataset.k}"]`).forEach(b=>b.classList.toggle('sel',b===el));
       if(el.dataset.k==='days'){const s=$('#splitName'); if(s) s.textContent=SPLIT_NAME[v]}
-      if(el.dataset.k==='place'){const h=$('#homeEq'); if(h) h.style.display=v==='home'?'block':'none'}
+      if(el.dataset.k==='place'){const h=$('#homeEq'); if(h) h.style.display=v==='home'?'block':'none'; const g=$('#gymEq'); if(g) g.style.display=v==='home'?'none':'block'}
       break; }
     case 'progDay': { progDay=+el.dataset.val; segUpdate(el); haptic(); const dv=$('#dayView'); dv.innerHTML=vDay(progDay); dv.classList.remove('fadein'); void dv.offsetWidth; dv.classList.add('fadein'); refreshAnims(); break; }
     case 'saveProfile': {
@@ -1858,7 +2052,7 @@ document.addEventListener('click',ev=>{
       if(!(h>=130&&h<=230)) return toastErr('Indique ta taille en cm');
       const first=!S.profile;
       const daysChanged=!S.profile||S.profile.days!==+F.days;
-      S.profile={sex:F.sex,age,weight:w,height:h,level:F.level,goal:F.goal,days:+F.days,prio:(F.prio||[]).slice(0,3),place:F.place||'gym',equip:[...(F.equip||[])],hmax:+F.hmax||20,kbmax:+F.kbmax||16};
+      S.profile={sex:F.sex,age,weight:w,height:h,level:F.level,goal:F.goal,days:+F.days,prio:(F.prio||[]).slice(0,3),place:F.place||'gym',equip:[...(F.equip||[])],hmax:+F.hmax||20,kbmax:+F.kbmax||16,chain:F.chain||'onair',noMach:[...(F.noMach||[])]};
       S.program=generate(S.profile); if(daysChanged) S.cycle={done:[],skipped:[]}; progDay=null; F=null; save();
       toast(first?'Programme généré':'Programme mis à jour'); go(first?'home':'program','fade'); break; }
     case 'start': unlockAudio(); startDay(+el.dataset.d); break;
@@ -1868,6 +2062,13 @@ document.addEventListener('click',ev=>{
     case 'science': sciSheet(); break;
     case 'change': changeSheet(); break;
     case 'placeOpen': placeSheet(); break;
+    case 'gymOpen': if(!S.profile){toast('Enregistre d’abord ton profil','info');break} gymSheet(); break;
+    case 'chainF': GF.chain=el.dataset.c; haptic(); $('#gymBody').innerHTML=gymBody(); refreshAnims(); break;
+    case 'machF': { const k=el.dataset.k, i=GF.noMach.indexOf(k); if(i>=0) GF.noMach.splice(i,1); else GF.noMach.push(k); el.classList.toggle('sel',i>=0); haptic(); break; }
+    case 'gymSave': { S.profile.chain=GF.chain; S.profile.noMach=[...GF.noMach]; GF=null; if(S.profile.place!=='home'){S.program=generate(S.profile); ensureCycle(); progDay=null} save(); closeSheet(); render(); toast('Ma salle mise à jour'); break; }
+    case 'figMode': figMode=el.dataset.val; segUpdate(el); haptic(); setTimeout(render,250); break;
+    case 'phAdd': { let inp=$('#phFile'); if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.id='phFile';inp.style.display='none';document.body.appendChild(inp)} inp.dataset.k=el.dataset.k; inp.value=''; inp.click(); break; }
+    case 'phDel': { const all=phAll(); delete all[el.dataset.k]; phSave(); toast('Photo supprimée','trash'); if(_exCtx) exInfo(_exCtx[0],_exCtx[1]); if(view==='workout') render(); break; }
     case 'eqF': { if(!F) break; readForm(); const k=el.dataset.e, i=F.equip.indexOf(k); if(i>=0) F.equip.splice(i,1); else F.equip.push(k); haptic(); refreshPlaceUI(); break; }
     case 'eqMax': { if(!F) break; readForm(); const k=el.dataset.k, st=k==='hmax'?2:4, lo=k==='hmax'?2:4, hi=k==='hmax'?60:48; F[k]=Math.min(hi,Math.max(lo,(+F[k]||(k==='hmax'?20:16))+(+el.dataset.d)*st)); refreshPlaceUI(); break; }
     case 'placeSave': { Object.assign(S.profile,{place:F.place||'gym',equip:[...(F.equip||[])],hmax:+F.hmax||20,kbmax:+F.kbmax||16}); F=null; S.program=generate(S.profile); ensureCycle(); progDay=null; save(); closeSheet(); render(); toast(S.profile.place==='home'?'Programme adapté à la maison':'Programme salle restauré', S.profile.place==='home'?'house':'dumbbell'); break; }
@@ -1934,6 +2135,8 @@ document.addEventListener('click',ev=>{
   }
 });
 document.addEventListener('change',ev=>{
+  if(ev.target.id==='phFile'){ const f=ev.target.files[0], k=ev.target.dataset.k; if(!f||!k) return;
+    compressImg(f).then(url=>{ phAll()[k]=url; if(phSave()){ toast('Photo enregistrée'); figMode='mach'; if(_exCtx&&$('#sheet').classList.contains('open')) exInfo(_exCtx[0],_exCtx[1]); render(); } }).catch(()=>toastErr('Image illisible')); return; }
   if(ev.target.id!=='importFile') return;
   const f=ev.target.files[0]; if(!f) return;
   const r=new FileReader(); r.onload=()=>{try{const d=JSON.parse(r.result); if(!d.v||!d.profile) throw 0; S=Object.assign(defState(),d); save(); toast('Sauvegarde importée'); go('home')}catch(e){toastErr('Fichier invalide')}}; r.readAsText(f);
@@ -1946,6 +2149,7 @@ function setupPWA(){ /* icônes et manifeste déclarés en dur dans <head> (fich
 if(S.profile && !S.program){S.program=generate(S.profile);save()}
 if(S.profile && !S.profile.prio){S.profile.prio=[]}
 if(S.profile && !S.profile.place){Object.assign(S.profile,{place:'gym',equip:[],hmax:20,kbmax:16})}
+if(S.profile && !S.profile.chain){Object.assign(S.profile,{chain:'onair',noMach:S.profile.noMach||[]})}
 if(S.program) ensureCycle();
 setupPWA();
 render();
