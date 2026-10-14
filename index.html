@@ -248,6 +248,7 @@ svg.fig .pd{fill:#48484a}
 .stp button{width:36px;height:40px;display:grid;place-items:center;color:var(--label);font-size:15px;flex:none;transition:opacity .15s}
 .stp button:active{opacity:.3}
 .stp span{flex:1;text-align:center;font:600 17px var(--round);white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:0}
+.radd{display:grid;place-items:center;width:40px;height:40px;margin:-8px -8px -8px 0;border-radius:50%;color:var(--tint);flex:none}.radd svg{width:24px;height:24px}.radd:active{background:var(--tint-d)}
 .stp .stpin{flex:1;min-width:0;width:100%;height:40px;border:0;background:transparent;color:var(--label);text-align:center;font:600 17px var(--round);font-variant-numeric:tabular-nums;padding:0;border-radius:8px;-webkit-appearance:none;appearance:none}.stp .stpin:focus{outline:2px solid var(--tint);outline-offset:-2px}
 .stp span small{font:500 12px var(--font);color:var(--label2);margin-left:2px}
 .setrow.done .stp{background:transparent}
@@ -2342,7 +2343,7 @@ let LOGDAY=null, LG=null, _offLast=0;
 const dKey=t=>{const z=new Date(t);return z.getFullYear()+'-'+String(z.getMonth()+1).padStart(2,'0')+'-'+String(z.getDate()).padStart(2,'0')};
 const todayK=()=>dKey(Date.now());
 const curDay=()=>LOGDAY||todayK();
-const norm=s=>String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[’']/g,' ');
+const norm=s=>String(s).toLowerCase().replace(/œ/g,'oe').replace(/æ/g,'ae').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[’']/g,' ');
 function logOf(k){return (S.log&&S.log[k])||[]}
 function logTot(k){const o={kcal:0,p:0,c:0,f:0};logOf(k).forEach(e=>{o.kcal+=e.kcal;o.p+=e.p;o.c+=e.c;o.f+=e.f});return o}
 function defMeal(){ if(NUT().omad) return 'repas'; const d=new Date(), h=d.getHours()+d.getMinutes()/60; return h<10.5?'pdj':h<15?'dej':h<18.5?'col':'din'}
@@ -2384,7 +2385,19 @@ function vJournal(){
 /* ----- Feuille d'ajout ----- */
 function logSheet(meal){ LG={meal:meal||defMeal(),tab:'food',q:'',sel:null,off:null,offErr:null,offLoading:false,offQ:''}; openSheet(`<div id="lgBody">${lgBody()}</div>`,{title:'Ajouter'}); setTimeout(()=>{const q=$('#fdQ');if(q)q.focus()},350) }
 function lgRefresh(){const b=$('#lgBody'); if(b) b.innerHTML=lgBody()}
-function recents(){const out=[],seen=new Set();Object.keys(S.log||{}).sort().reverse().forEach(k=>logOf(k).slice().reverse().forEach(e=>{const key=e.name+'|'+(e.qty||'');if(!seen.has(key)&&out.length<8){seen.add(key);out.push(e)}}));return out}
+/* Récents et fréquents : un seul par aliment (dernière quantité), classés par fréquence et récence,
+   avec un bonus pour ce qui est habituellement mangé au repas choisi. */
+function recents(){
+  const now=Date.now(), by={}, meal=LG&&LG.meal;
+  Object.keys(S.log||{}).forEach(k=>logOf(k).forEach(e=>{
+    const days=Math.max(0,(now-(e.t||now))/dayMs); if(days>60) return;
+    const key=norm(e.name), w=(e.meal===meal?2:1)/(1+days/7), o=by[key];
+    if(!o) by[key]={e,sc:w,n:1}; else { o.sc+=w; o.n++; if((e.t||0)>(o.e.t||0)) o.e=e }
+  }));
+  return Object.values(by).sort((a,b)=>b.sc-a.sc).slice(0,10).map(o=>({...o.e,_n:o.n}));
+}
+/* Aliments courants proposés tant qu'il n'y a pas d'historique */
+const STARTERS=['oeuf','poulet','riz','pates_cuites','banane','pain_complet','skyr','whey','avoine','pomme'];
 const swp=(inner,kind,id)=>`<div class="swp" data-del="${kind}" data-id="${esc(id)}"><div class="swp-act"><button data-a="swDel">Supprimer</button></div><div class="swp-c">${inner}</div></div>`;
 const mpCell=(c,o,lbl)=>swp(cell({a:'fdPick',attrs:`data-k="mp_${c}"`,icon:ic('barcode'),bg:'var(--indigo)',title:`<span class="ct sm">${esc(o.n)}${lbl?' <span class="cs">(mon produit)</span>':''}</span>`,sub:`${r1(o.v[0])} kcal / 100 g · P ${fmtNum(+(+o.v[1]).toFixed(1))} · G ${fmtNum(+(+o.v[2]).toFixed(1))} · L ${fmtNum(+(+o.v[3]).toFixed(1))}`,chev:true}),'prod',c);
 function fdRefresh(){const l=$('#fdList'); if(l) l.innerHTML=fdList(); else lgRefresh()}
@@ -2395,8 +2408,8 @@ function fdList(){
     const rc=recents();
     return `${err}<div class="btnwrap" style="margin-bottom:22px"><button class="btn" data-a="scanOpen">${ic('barcode')} Scanner un code-barres</button></div>
       ${mine.length?sec('Mes produits',mine.map(([c,o])=>mpCell(c,o)).join(''),'Glisse vers la gauche pour supprimer un produit.'):''}
-      ${rc.length?sec('Récents',rc.map((e,i)=>cell({a:'recentAdd',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(e.name)}</span>`,sub:esc(e.qty||''),value:r1(e.kcal)+' kcal',right:`<span class="tint" style="font-size:22px">${ic('plus')}</span>`})).join(''),'Un appui l’ajoute directement au repas choisi.'):''}
-      ${!mine.length&&!rc.length?`<div class="empty" style="padding:24px 30px">Tape un aliment (riz, poulet, pizza…), un produit du commerce, ou scanne un code-barres.</div>`:''}`;
+      ${rc.length?sec('Récents et fréquents',rc.map((e,i)=>cell({a:'recentOpen',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(e.name)}</span>`,sub:`${esc(e.qty||'')}${e._n>1?` · ${e._n} fois`:''}`,value:r1(e.kcal)+' kcal',right:`<span class="radd" data-a="recentAdd" data-i="${i}" role="button" aria-label="Ajouter ${esc(e.name)} tel quel">${ic('plus')}</span>`})).join(''),'Touche + pour l’ajouter tel quel, ou la ligne pour changer la quantité.')
+        :sec('Aliments courants',STARTERS.filter(k=>FOODS[k]).map(k=>{const f=FOODS[k];return cell({a:'fdPick',attrs:`data-k="${k}"`,title:`<span class="ct sm">${esc(f.n)}</span>`,sub:`${f.v[0]} kcal / 100 ${f.u||'g'}`,chev:true})}).join(''),'Tes aliments récents apparaîtront ici pour les ajouter en un appui.')}`;
   }
   const toks=q.split(/\s+/), hit=n=>toks.every(t=>norm(n).includes(t));
   const mp=mine.filter(([c,o])=>hit(o.n)), fd=Object.entries(FOODS).filter(([k,f])=>hit(f.n)).slice(0,30);
@@ -2584,7 +2597,8 @@ async function npOnline(){
 }
 function lgConfirm(){
   const s=LG.sel, m=selMac(); const qty=s.kind==='rx'?`portion ×${fmtNum(s.k)}`:s.unit==='pc'?`${fmtNum(s.qty)} ${s.pc[1]}${s.qty>1?'s':''}`:`${s.qty} ${s.u||'g'}`;
-  addLog({meal:LG.meal,name:s.name,qty,kcal:m.kcal,p:m.p,c:m.c,f:m.f,src:s.kind});
+  const ref=s.kind==='rx'?{kind:'rx',key:s.key,k:s.k}:{kind:s.kind,name:s.name,v:s.v,u:s.u,pc:s.pc,unit:s.unit,qty:s.qty};
+  addLog({meal:LG.meal,name:s.name,qty,kcal:m.kcal,p:m.p,c:m.c,f:m.f,src:s.kind,ref});
   const k=r1(m.kcal); closeSheet(); render(); toast(`+${k} kcal ajoutées`);
 }
 
@@ -2686,7 +2700,16 @@ document.addEventListener('click',ev=>{
       actionSheet({title:esc(e.name),msg:`${r1(e.kcal)} kcal · P ${r1(e.p)} g · G ${r1(e.c)} g · L ${r1(e.f)} g`,actions:[
         {label:'Ajouter à nouveau',fn:()=>{const {id,t,...c}=e; addLog(c,k); render(); toast(`+${r1(e.kcal)} kcal ajoutées`)}},
         {label:'Supprimer',style:'destructive',fn:()=>{S.log[k]=logOf(k).filter(x=>x.id!==e.id); save(); render(); toast('Supprimé','trash')}}]}); break; }
-    case 'recentAdd': { const e=recents()[+el.dataset.i]; if(!e) break; const {id,t,meal,...c}=e; addLog({...c,meal:LG.meal}); render(); haptic(); toast(`+${r1(e.kcal)} kcal · ${e.name}`); break; }
+    case 'recentAdd': { const e=recents()[+el.dataset.i]; if(!e) break; const {id,t,meal,_n,...c}=e; addLog({...c,meal:LG.meal}); render(); haptic(); toast(`+${r1(e.kcal)} kcal · ${e.name}`); lgRefresh(); break; }
+    case 'recentOpen': { const e=recents()[+el.dataset.i]; if(!e) break; const R=e.ref;
+      if(R&&R.kind==='rx'&&rxOf(R.key)) LG.sel={kind:'rx',key:R.key,name:e.name,k:R.k||1};
+      else if(R&&R.v) LG.sel={kind:R.kind,name:R.name||e.name,v:R.v,u:R.u,pc:R.pc,unit:R.unit||'g',qty:R.qty||100};
+      else { /* ancienne entrée : on retrouve l'aliment de la base par son nom, sinon on recalcule pour 100 g */
+        const hit=Object.entries(FOODS).find(([k,f])=>norm(f.n)===norm(e.name)), g=parseFloat(String(e.qty||'').replace(',','.'));
+        if(hit){const f=hit[1]; LG.sel={kind:'food',name:f.n,v:f.v,u:f.u,pc:f.pc,unit:'g',qty:g>0&&/\b(g|ml)\b/.test(e.qty)?g:100}}
+        else if(g>0&&/\b(g|ml)\b/.test(e.qty)) LG.sel={kind:'off',name:e.name,v:[e.kcal/g*100,e.p/g*100,e.c/g*100,e.f/g*100],unit:'g',qty:g};
+        else { const {id,t,meal,_n,...c}=e; addLog({...c,meal:LG.meal}); render(); haptic(); toast(`+${r1(e.kcal)} kcal · ${e.name}`); lgRefresh(); break; } }
+      lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'fdPick': { const k0=el.dataset.k, f=k0.startsWith('mp_')?(()=>{const o=S.myprod[k0.slice(3)];return {n:o.n,v:o.v}})():FOODS[k0]; LG.sel={kind:'food',name:f.n,v:f.v,u:f.u,pc:f.pc,unit:f.pc?'pc':'g',qty:f.pc?1:100}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'rxPick': { const r=rxOf(el.dataset.id); LG.sel={kind:'rx',key:r.id,name:r.n,k:1}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'offPick': { const o=LG.off[+el.dataset.i]; LG.sel={kind:'off',name:o.n,v:o.v,qty:o.sv||100,unit:'g'}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
