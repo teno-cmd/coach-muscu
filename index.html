@@ -248,6 +248,11 @@ svg.fig .pd{fill:#48484a}
 .stp button{width:36px;height:40px;display:grid;place-items:center;color:var(--label);font-size:15px;flex:none;transition:opacity .15s}
 .stp button:active{opacity:.3}
 .stp span{flex:1;text-align:center;font:600 17px var(--round);white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:0}
+.dname{width:100%;font:700 22px var(--font);color:var(--label);background:var(--fill4);border:0;border-radius:10px;padding:6px 10px;margin:-6px 0 4px -10px}.dname:focus{outline:2px solid var(--tint)}
+.edrow{gap:10px}.edtap{flex:1;min-width:0;text-align:left;display:flex;flex-direction:column;background:none;border:0;color:inherit;padding:0}
+.edmv{display:flex;flex-direction:column;gap:2px;flex:none}.edmv button{width:34px;height:26px;display:grid;place-items:center;border-radius:8px;background:var(--fill4);color:var(--label)}.edmv button svg{width:14px;height:14px;transform:rotate(90deg)}.edmv button:disabled{opacity:.25}
+.cell.off{opacity:.4;pointer-events:none}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:0 16px 14px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}.chip{flex:none;padding:7px 13px;border-radius:999px;background:var(--fill4);color:var(--label);font:500 14px var(--font)}.chip.on{background:var(--tint);color:#000}
 .radd{display:grid;place-items:center;width:40px;height:40px;margin:-8px -8px -8px 0;border-radius:50%;color:var(--tint);flex:none}.radd svg{width:24px;height:24px}.radd:active{background:var(--tint-d)}
 .stp .stpin{flex:1;min-width:0;width:100%;height:40px;border:0;background:transparent;color:var(--label);text-align:center;font:600 17px var(--round);font-variant-numeric:tabular-nums;padding:0;border-radius:8px;-webkit-appearance:none;appearance:none}.stp .stpin:focus{outline:2px solid var(--tint);outline-offset:-2px}
 .stp span small{font:500 12px var(--font);color:var(--label2);margin-left:2px}
@@ -624,7 +629,33 @@ const TPL = {
  PUSH_B:{n:'Push B',f:'Machines convergentes',x:['chest_press','dev_mil_halt','dips_assist','pec_deck','elev_lat_poulie','triceps_poulie']},
  PULL_B:{n:'Pull B',f:'Dos épaisseur & largeur',x:['tirage_vertical','rowing_machine','rowing_halt','reverse_fly','curl_poulie','crunch_poulie']},
  LEGS_B:{n:'Legs B',f:'Hack · Fessiers',x:['hack_squat','hip_thrust','fentes_halt','leg_curl_allonge','leg_ext','releve_jambes']},
+ BRO_PEC:{n:'Pectoraux',f:'Pecs sous tous les angles',x:['dc_barre','dc_incl_halt','chest_press','dips_assist','pec_fly_poulie','pec_deck']},
+ BRO_DOS:{n:'Dos',f:'Largeur & épaisseur',x:['tractions','rowing_barre','tirage_vertical','rowing_assis_poulie','pullover_poulie','rowing_halt']},
+ BRO_EPA:{n:'Épaules',f:'Deltoïdes avant, moyens et arrière',x:['dev_mil_halt','shoulder_press_machine','elev_lat_halt','elev_lat_poulie','face_pull','reverse_fly','crunch_poulie']},
+ BRO_JAM:{n:'Jambes',f:'Quadriceps · Ischios · Fessiers',x:['squat_barre','rdl_barre','presse_cuisses','hip_thrust','leg_curl_assis','leg_ext','mollets_debout']},
+ BRO_BRAS:{n:'Bras',f:'Biceps · Triceps',x:['curl_halt','triceps_poulie','curl_pupitre','triceps_overhead','curl_poulie','releve_jambes']},
+ ARN_PD_A:{n:'Pecs & Dos A',f:'Force : barre & haltères',x:['dc_barre','rowing_barre','dc_incl_halt','tractions','pec_fly_poulie','pullover_poulie']},
+ ARN_PD_B:{n:'Pecs & Dos B',f:'Machines & poulies',x:['chest_press','tirage_vertical','dips_assist','rowing_assis_poulie','pec_deck','rowing_halt']},
+ ARN_EB_A:{n:'Épaules & Bras A',f:'Force',x:['dev_mil_halt','elev_lat_halt','curl_halt','triceps_overhead','face_pull','curl_pupitre','triceps_poulie']},
+ ARN_EB_B:{n:'Épaules & Bras B',f:'Volume',x:['shoulder_press_machine','elev_lat_poulie','reverse_fly','curl_poulie','triceps_poulie','curl_halt','crunch_poulie']},
 };
+/* Splits au choix. « auto » = choix recommandé selon le nombre de séances (PLANS). */
+const SPLITS={
+ fb2:{n:'Full Body ×2',d:'Tout le corps à chaque séance',days:['FB_A','FB_B']},
+ ul2:{n:'Haut / Bas',d:'Un jour haut du corps, un jour jambes',days:['UP_A','LO_A']},
+ fb3:{n:'Full Body ×3',d:'Chaque muscle 3 fois par semaine',days:['FB_A','FB_B','FB_C']},
+ ppl3:{n:'Push · Pull · Legs',d:'Poussée, tirage, jambes',days:['PUSH_A','PULL_A','LEGS_A']},
+ ulf3:{n:'Haut / Bas / Full Body',d:'Bon compromis fréquence et volume',days:['UP_A','LO_A','FB_B']},
+ ul4:{n:'Haut / Bas ×2',d:'Chaque muscle 2 fois par semaine',days:['UP_A','LO_A','UP_B','LO_B']},
+ pplu4:{n:'Push · Pull · Legs + Haut',d:'PPL plus une séance haut du corps',days:['PUSH_A','PULL_A','LEGS_A','UP_B']},
+ pplul5:{n:'Push · Pull · Legs + Haut/Bas',d:'Fréquence 2 sur presque tout',days:['PUSH_A','PULL_A','LEGS_A','UP_B','LO_B']},
+ bro5:{n:'Bro split',d:'Un groupe musculaire par jour, volume élevé par séance',days:['BRO_PEC','BRO_DOS','BRO_JAM','BRO_EPA','BRO_BRAS']},
+ ppl6:{n:'Push · Pull · Legs ×2',d:'Chaque muscle 2 fois, pour avancés',days:['PUSH_A','PULL_A','LEGS_A','PUSH_B','PULL_B','LEGS_B']},
+ arnold6:{n:'Arnold split',d:'Pecs/Dos, Épaules/Bras, Jambes, ×2',days:['ARN_PD_A','ARN_EB_A','LEGS_A','ARN_PD_B','ARN_EB_B','LEGS_B']},
+};
+const AUTO_SPLIT={2:'fb2',3:'fb3',4:'ul4',5:'pplul5',6:'ppl6'};
+const splitOf=p=>{const k=p&&p.split; return k&&SPLITS[k]&&SPLITS[k].days.length===+p.days?k:AUTO_SPLIT[p.days]};
+const splitsFor=n=>Object.entries(SPLITS).filter(([k,o])=>o.days.length===+n);
 const PLANS = {2:['FB_A','FB_B'],3:['FB_A','FB_B','FB_C'],4:['UP_A','LO_A','UP_B','LO_B'],5:['PUSH_A','PULL_A','LEGS_A','UP_B','LO_B'],6:['PUSH_A','PULL_A','LEGS_A','PUSH_B','PULL_B','LEGS_B']};
 const SPLIT_NAME = {2:'Full Body ×2',3:'Full Body ×3',4:'Haut / Bas ×2',5:'Push · Pull · Legs + Haut/Bas',6:'Push · Pull · Legs ×2'};
 const BEG_SUB = {squat_barre:'hack_squat',dc_barre:'chest_press',rowing_barre:'rowing_machine',rdl_barre:'rdl_halt',tractions:'tirage_vertical',dips_assist:'chest_press'};
@@ -841,6 +872,8 @@ function refreshPlaceUI(){
 }
 function otherPlaceDay(i){
   const p=S.profile, other=(p.place==='home')?'gym':'home', p2={...p,place:other}, d=S.program.days[i];
+  if(d.edited||!TPL[d.k]){ const used=new Set(), pv=_placeCtx; _placeCtx=other; const ex=d.ex.map(x=>{const r=resolveEx(x.id,p2,used); if(!r) return null; used.add(r); return r===x.id?{...x}:{...prescribe(r,0,p2),sets:x.sets}}).filter(Boolean); _placeCtx=pv;
+    return {k:d.k,n:d.n+(other==='home'?' · maison':' · salle'),f:d.f,place:other,ex,edited:true} }
   const d2=buildDay(d.k,p2); const pv=_placeCtx; _placeCtx=other; applyPrio([d2],p2); _placeCtx=pv; d2.n=d.n+(other==='home'?' · maison':' · salle'); return d2;
 }
 
@@ -1142,7 +1175,7 @@ function prescribe(id,i,p){
   return x;
 }
 function generate(p){
-  const days = PLANS[p.days].map(k=>buildDay(k,p));
+  const days = SPLITS[splitOf(p)].days.map(k=>buildDay(k,p));
   const pv=_placeCtx; _placeCtx=p.place||'gym'; applyPrio(days,p); _placeCtx=pv;
   return {days,created:Date.now()};
 }
@@ -1329,6 +1362,7 @@ const SYM = {
  bolt:`<path ${FL} d="M13.6 1.8 4.6 13.4h6.3l-1.2 8.8 9.1-11.9h-6.3z"/>`,
  gauge:`<path ${ST} stroke-width="2" d="M4 17a8 8 0 1 1 16 0"/><path ${ST} stroke-width="2.2" d="m12 17 3.8-5.2"/>`,
  timer:`<circle ${ST} cx="12" cy="13.4" r="8"/><path ${ST} d="M12 9.2v4.4l2.8 1.7M9.4 2.6h5.2"/>`,
+ edit:`<path ${ST} stroke-width="2" d="M4.5 19.5h4l10.2-10.2a2.1 2.1 0 0 0-3-3L5.5 16.5zM13.8 7.6l2.6 2.6"/>`,
  list:`<path ${ST} stroke-width="2" d="M9 6.5h11M9 12h11M9 17.5h11"/><circle ${FL} cx="4.6" cy="6.5" r="1.4"/><circle ${FL} cx="4.6" cy="12" r="1.4"/><circle ${FL} cx="4.6" cy="17.5" r="1.4"/>`,
  swap:`<path ${ST} stroke-width="2" d="M7.2 3.8 3.6 7.4 7.2 11M3.6 7.4h13.6M16.8 13l3.6 3.6-3.6 3.6M20.4 16.6H6.8"/>`,
  speaker:`<path ${FL} d="M3.5 9.2h3.4L11.8 5v14l-4.9-4.2H3.5z"/><path ${ST} stroke-width="2" d="M15.3 9.2a4.2 4.2 0 0 1 0 5.6M17.9 6.6a8 8 0 0 1 0 10.8"/>`,
@@ -1447,10 +1481,14 @@ function profileForm(){
       'Le sexe et l’âge servent uniquement à estimer tes charges et tes besoins caloriques.')
    +sec('Entraînement',
       `<div class="cell stack"><span class="ct">Niveau</span>${seg('level',[['deb','Débutant'],['int','Intermédiaire'],['adv','Avancé']],F.level)}<span class="cs">Débutant : moins de 6 mois · Intermédiaire : 6 mois à 3 ans · Avancé : plus de 3 ans.</span></div>
-       <div class="cell stack"><span class="ct">Séances par semaine</span>${seg('days',[[2,'2'],[3,'3'],[4,'4'],[5,'5'],[6,'6']],F.days)}<span class="cs" id="splitName">${SPLIT_NAME[F.days]}</span></div>`)
+       <div class="cell stack"><span class="ct">Séances par semaine</span>${seg('days',[[2,'2'],[3,'3'],[4,'4'],[5,'5'],[6,'6']],F.days)}</div><div id="splitBox">${splitRows(F)}</div>`)
    +sec('Lieu d’entraînement',placeRows(F),'À la maison, les machines sont remplacées par des alternatives adaptées à ton matériel, en gardant les mêmes muscles.')
    +sec('Objectif',Object.entries(GOALS).map(([k,g])=>cell({a:'setF',attrs:`data-k="goal" data-val="${k}"`,cls:'goal '+(F.goal===k?'sel':''),icon:ic(GOAL_UI[k][0],1),bg:GOAL_UI[k][1],title:g.n,sub:g.d,right:`<span class="ck">${ic('check')}</span>`})).join(''))
    +sec('Muscles prioritaires (optionnel)',Object.entries(PRIO).map(([g,o])=>cell({a:'prioF',attrs:`data-g="${g}"`,cls:'goal '+(F.prio.includes(g)?'sel':''),title:o.n,right:`<span class="ck">${ic('check')}</span>`})).join(''),'Jusqu’à 3 groupes : plus de volume et placés en début de séance.');
+}
+function splitRows(o){
+  const cur=splitOf(o), rec=AUTO_SPLIT[o.days];
+  return splitsFor(o.days).map(([k,x])=>cell({a:'setF',attrs:`data-k="split" data-val="${k}"`,cls:'goal '+(cur===k?'sel':''),title:`${x.n}${k===rec?' <span class="tint" style="font-size:13px">· recommandé</span>':''}`,sub:x.d,right:`<span class="ck">${ic('check')}</span>`})).join('');
 }
 function readForm(){ if(!F) return; const g=id=>{const e=document.getElementById(id);return e?e.value:undefined};
   const a=g('fAge'),w=g('fWeight'),h=g('fHeight'); if(a!==undefined)F.age=a; if(w!==undefined)F.weight=w; if(h!==undefined)F.height=h; }
@@ -1541,22 +1579,92 @@ function vProgram(){
   if(progDay==null||progDay>=days.length) progDay=nextIdx();
   const q=planQueue(), rec=recovery(Date.now());
   const vol=volumeByMuscle(), mx=Math.max(...vol.map(v=>v[1]),20);
-  return page('Programme',{sub:`${placeName(p.place)} · ${SPLIT_NAME[p.days]} · ${GOALS[p.goal].n} · RIR ${rir()}`},
+  return page('Programme',{sub:`${placeName(p.place)} · ${S.program.custom?'Programme personnalisé':SPLITS[splitOf(p)].n} · ${GOALS[p.goal].n} · RIR ${rir()}`},
    `<div class="segwrap">${seg('progDay',days.map((d,i)=>[i,'J'+(i+1)]),progDay,'progDay')}</div>
     <div id="dayView">${vDay(progDay)}</div>
     ${sec('Planning à venir',q.map((i,k)=>{const d=days[i],[lb]=readyBadge(readiness(d,rec));return cell({a:'progJump',attrs:`data-i="${i}"`,icon:`<b style="color:${k?'#fff':'#000'}">${k+1}</b>`,bg:k?'var(--bg4)':'var(--tint)',title:esc(d.n),sub:k?esc(d.f):`Prochaine · ${lb}`,chev:true})}).join('')
       +cell({a:'change',icon:ic('swap'),bg:'var(--blue)',title:'Changer, remplacer ou sauter',sub:'Autre séance, séance rappel ciblée ou séance sautée',chev:true}),
       `${S.cycle.done.length} sur ${days.length} séances faites dans ce cycle. L’ordre s’adapte à ta récupération (48 à 72 h par muscle), évite d’enchaîner les mêmes muscles et rattrape le volume en retard.`,true)}
+    ${sec('Personnaliser',cell({a:'splitOpen',icon:ic('list'),bg:'var(--purple)',title:'Split',value:S.program.custom?'Perso':esc(SPLITS[splitOf(p)].n),chev:true})
+      +cell({a:'addDayOpen',icon:ic('plus'),bg:'var(--blue)',title:'Ajouter un jour',sub:'Séance vide ou à partir d’un modèle',chev:true})
+      +(S.program.custom?cell({a:'resetAuto',icon:ic('swap'),bg:'var(--orange)',title:'Revenir au programme automatique',sub:'Remplace tes modifications par le programme généré'}):''),
+      S.program.custom?'Programme personnalisé : il n’est plus modifié automatiquement quand tu changes ton profil, ton lieu ou tes priorités.':'Choisis ton split, ou touche « Modifier la séance » sur un jour pour créer tes propres séances.',true)}
     ${sec('Lieu d’entraînement',cell({a:'placeOpen',icon:ic(p.place==='home'?'house':'dumbbell',1),bg:'var(--teal)',title:placeName(p.place),sub:p.place==='home'?equipSummary(p):'Salle · '+(CHAINS[gymOf().chain]||CHAINS.autre).n,chev:true})+(p.place==='home'?'':cell({a:'gymOpen',icon:ic('target'),bg:'var(--indigo)',title:'Ma salle et ses machines',sub:gymOf().noMach.length?gymOf().noMach.length+' machine(s) indisponible(s) remplacée(s)':'Toutes les machines disponibles · photos perso',chev:true})),'Modifiable à tout moment : les exercices sont remplacés en gardant les mêmes muscles. Tu peux aussi changer de lieu pour une seule séance depuis « Changer de séance ».',true)}
     ${sec('Priorités',cell({a:'prio',icon:ic('target'),bg:'var(--purple)',title:'Muscles prioritaires',value:(p.prio&&p.prio.length)?p.prio.map(g=>PRIO[g].n).join(', '):'Aucun',chev:true}),'Modifiable à tout moment : le programme est régénéré sans perdre ton historique.',true)}
     ${sec('Volume hebdomadaire',vol.map(([m,n])=>`<div class="cell"><span class="ct" style="width:96px;flex:none">${MUS[m]}</span><span class="vbar"><i class="${n<10?'low':''}" style="width:${n/mx*100}%"></i></span><span class="cv" style="width:26px;text-align:right">${n}</span></div>`).join(''),
       'Séries directes par semaine. Repère : 10 à 20 séries par muscle pour l’hypertrophie. Les muscles en orange reçoivent aussi du volume indirect (triceps au développé, biceps au tirage…).',true)}`);
 }
 function vDay(i){
+  if(EDIT===i) return vDayEdit(i);
   const d=S.program.days[i], nd=nextIdx();
   return `<div class="dayhead"><div><div class="t2">${esc(d.n)}</div><div class="sub">${esc(d.f)} · ≈ ${estDuration(d)} min</div></div>${i===nd?'<span class="pill t">Prochaine</span>':''}</div>
    ${sec('',d.ex.map(x=>`<button class="cell ex" data-a="exinfo" data-id="${x.id}" data-d="${i}"><span class="exth">${figSVG(x.id)}</span><span class="cbody"><span class="ct">${esc(EX[x.id].n)}</span><span class="cs">${x.prio?'<span class="tint">Prioritaire</span> · ':''}${x.sets} × ${x.rmin}–${x.rmax} reps · ${restLbl(x.rest)} · ${fmtW(suggest(x.id).w,x.id)}</span></span>${CH}</button>`).join(''))}
-   <div class="btnwrap"><button class="btn" data-a="start" data-d="${i}">${ic('play',1)} Commencer ${esc(d.n)}</button><button class="btn gray" data-a="fiche" data-d="${i}">${ic('list')} Voir la fiche de séance</button></div>`;
+   <div class="btnwrap"><button class="btn" data-a="start" data-d="${i}">${ic('play',1)} Commencer ${esc(d.n)}</button><button class="btn gray" data-a="fiche" data-d="${i}">${ic('list')} Voir la fiche de séance</button><button class="btn gray" data-a="edOpen" data-d="${i}">${ic('edit')} Modifier la séance</button></div>`;
+}
+/* =========================================================
+   PROGRAMME PERSONNALISÉ : éditeur de séance
+   Toute modification passe le programme en « personnalisé » (S.program.custom) :
+   il n'est plus régénéré automatiquement (profil, lieu, priorités), sauf demande explicite.
+   ========================================================= */
+let EDIT=null, LIB=null;
+const dayFocus=d=>[...new Set(d.ex.map(x=>MUS[EX[x.id].m]))].slice(0,3).join(' · ')||'Séance vide';
+function markCustom(d){ S.program.custom=true; if(d){ d.edited=true; d.f=dayFocus(d) } save() }
+function remapCycle(fn){ const m=a=>a.map(fn).filter(i=>i>=0); S.cycle.done=m(S.cycle.done||[]); S.cycle.skipped=m(S.cycle.skipped||[]); if(S.active&&S.active.di>=0){const n=fn(S.active.di); if(n<0){S.active.custom=true;S.active.di=-1} else S.active.di=n} }
+function vDayEdit(i){
+  const d=S.program.days[i], n=S.program.days.length;
+  return `<div class="dayhead"><div style="flex:1;min-width:0"><input id="dayName" class="dname" value="${esc(d.n)}" maxlength="40" aria-label="Nom de la séance" autocomplete="off"><div class="sub">${esc(dayFocus(d))} · ≈ ${estDuration(d)} min</div></div><span class="pill t">Modification</span></div>
+   ${sec('Exercices',d.ex.map((x,j)=>`<div class="cell ex edrow"><span class="exth">${figSVG(x.id)}</span><button class="cbody edtap" data-a="edEx" data-j="${j}"><span class="ct">${esc(EX[x.id].n)}</span><span class="cs">${x.sets} × ${x.rmin}–${x.rmax} reps · ${restLbl(x.rest)}</span></button><span class="edmv"><button data-a="edMove" data-j="${j}" data-d="-1" aria-label="Monter" ${j?'':'disabled'}>${ic('chevL')}</button><button data-a="edMove" data-j="${j}" data-d="1" aria-label="Descendre" ${j<d.ex.length-1?'':'disabled'}>${ic('chev')}</button></span></div>`).join('')
+     +cell({a:'edAdd',icon:ic('plus'),bg:'var(--tint);color:#000',title:'<span class="tint">Ajouter un exercice</span>'}),
+     'Touche un exercice pour régler séries, reps et repos, le remplacer ou le retirer. Les flèches changent l’ordre.')}
+   ${sec('Ce jour',cell({a:'edDayMove',attrs:'data-d="-1"',icon:ic('chevL'),bg:'var(--gray)',title:'Placer plus tôt dans la semaine',cls:i?'':'off'})
+     +cell({a:'edDayMove',attrs:'data-d="1"',icon:ic('chev'),bg:'var(--gray)',title:'Placer plus tard dans la semaine',cls:i<n-1?'':'off'})
+     +cell({a:'edDup',icon:ic('list'),bg:'var(--blue)',title:'Dupliquer ce jour'})
+     +(n>1?cell({a:'edDelDay',icon:ic('trash'),bg:'var(--red)',title:'<span style="color:var(--red)">Supprimer ce jour</span>'}):''))}
+   <div class="btnwrap"><button class="btn" data-a="edDone">${ic('check')} Terminé</button></div>`;
+}
+function edRefresh(){ const dv=$('#dayView'); if(dv){dv.innerHTML=vDay(progDay);refreshAnims()} else render() }
+const REST_OPTS=[[45,'45 s'],[60,'1 min'],[90,'1:30'],[120,'2 min'],[150,'2:30'],[180,'3 min'],[240,'4 min']];
+function edExSheet(j){
+  const d=S.program.days[EDIT], x=d&&d.ex[j]; if(!x) return;
+  const stp=(f,lbl,v,sub)=>`<div class="cell"><span class="cbody"><span class="ct">${lbl}</span>${sub?`<span class="cs">${sub}</span>`:''}</span><div class="stp" style="width:136px;flex:none"><button data-a="edSet" data-f="${f}" data-d="-1" aria-label="Moins">${ic('minus')}</button><span>${v}</span><button data-a="edSet" data-f="${f}" data-d="1" aria-label="Plus">${ic('plus')}</button></div></div>`;
+  openSheet(`<div id="edExBody"><div class="pad"><div class="t2">${esc(EX[x.id].n)}</div><div class="sub">${esc(MUS[EX[x.id].m])} · ${esc(eqOf(x.id))}</div></div>
+   ${sec('Volume',stp('sets','Séries',x.sets)+stp('rmin','Reps minimum',x.rmin)+stp('rmax','Reps maximum',x.rmax,'Quand tu atteins le maximum sur toutes les séries, la charge augmente'))}
+   ${sec('Repos entre les séries',`<div class="cell stack">${seg('rest',REST_OPTS.map(([v,l])=>[v,l]),REST_OPTS.some(o=>o[0]===x.rest)?x.rest:120,'edRest')}</div>`,'Repère : 2 à 3 min sur les gros exercices lourds, 1 à 1 min 30 en isolation.')}
+   <div class="btnwrap"><button class="btn gray" data-a="edLib" data-mode="replace" data-j="${j}">${ic('swap')} Remplacer l’exercice</button><button class="btn red" data-a="edRemove" data-j="${j}">${ic('trash')} Retirer de la séance</button></div></div>`,{title:'Exercice'});
+  LIB={j};
+}
+/* Bibliothèque d'exercices : filtres par muscle + recherche, compatible avec le lieu (matériel, machines du club) */
+function libSheet(mode,j){
+  const d=S.program.days[EDIT], cur=j!=null&&d.ex[j]?EX[d.ex[j].id].m:'all';
+  LIB={mode,j,m:mode==='replace'?cur:'all',q:''};
+  openSheet(`<div class="pad"><div class="t2">${mode==='replace'?'Remplacer « '+esc(EX[d.ex[j].id].n)+' »':'Ajouter un exercice'}</div></div>
+   <div class="srch">${ic('search')}<input id="libQ" type="search" placeholder="Rechercher un exercice" autocomplete="off"></div>
+   <div class="chips" id="libChips">${libChips()}</div><div id="libList">${libList()}</div>`,{title:'Exercices'});
+}
+const libChips=()=>[['all','Tous'],...Object.entries(MUS)].map(([k,l])=>`<button class="chip ${LIB.m===k?'on':''}" data-a="libM" data-m="${k}">${l}</button>`).join('');
+function libList(){
+  const d=S.program.days[EDIT], p={...S.profile,place:d.place||S.profile.place||'gym'}, inDay=d.ex.map(x=>x.id), q=norm(LIB.q||'').trim();
+  const ids=Object.keys(EX).filter(id=>fits(id,p)&&(LIB.m==='all'||EX[id].m===LIB.m)&&(!q||q.split(/\s+/).every(t=>norm(EX[id].n+' '+MUS[EX[id].m]).includes(t))))
+    .sort((a,b)=>({H:0,C:1,I:2,A:3}[EX[a].t])-({H:0,C:1,I:2,A:3}[EX[b].t]));
+  if(!ids.length) return `<div class="empty" style="padding:30px">Aucun exercice ne correspond${p.place==='home'?' avec ton matériel':''}.</div>`;
+  return sec(`${ids.length} exercice${ids.length>1?'s':''}${p.place==='home'?' · compatibles avec ton matériel':''}`,ids.map(id=>{const has=inDay.includes(id);
+    return `<button class="cell ex ${has?'off':''}" ${has?'':`data-a="libPick" data-id="${id}"`}><span class="exth">${figSVG(id)}</span><span class="cbody"><span class="ct">${esc(EX[id].n)}</span><span class="cs">${has?'Déjà dans la séance':`${esc(MUS[EX[id].m])} · ${esc(eqOf(id))}`}</span></span>${has?'':CH}</button>`}).join(''));
+}
+function libPick(id){
+  const d=S.program.days[EDIT], p={...S.profile,place:d.place||S.profile.place||'gym'}, pv=_placeCtx; _placeCtx=p.place;
+  if(LIB.mode==='replace'){ const old=d.ex[LIB.j], px=prescribe(id,LIB.j,p); d.ex[LIB.j]={...px,sets:old.sets}; toast(`Remplacé par ${EX[id].n}`) }
+  else { d.ex.push(prescribe(id,d.ex.length,p)); toast(`${EX[id].n} ajouté`) }
+  _placeCtx=pv; markCustom(d); closeSheet(); edRefresh();
+}
+function splitSheet(){
+  const cur=S.program.custom?null:splitOf(S.profile);
+  openSheet(`<div class="pad"><div class="t2">Choisir un split</div><div class="sub">Le nombre de séances par semaine s’adapte au split choisi.</div></div>
+   ${[2,3,4,5,6].map(n=>sec(`${n} séances / semaine`,splitsFor(n).map(([k,x])=>cell({a:'splitPick',attrs:`data-k="${k}"`,cls:'goal '+(cur===k?'sel':''),title:`${x.n}${AUTO_SPLIT[n]===k?' <span class="tint" style="font-size:13px">· recommandé</span>':''}`,sub:`${x.d} · ${x.days.map(d=>TPL[d].n).join(', ')}`,right:`<span class="ck">${ic('check')}</span>`})).join(''))).join('')}`,{title:'Split'});
+}
+function addDaySheet(){
+  openSheet(`<div class="pad"><div class="t2">Ajouter un jour</div><div class="sub">Pars d’une séance vide ou d’un modèle, puis modifie-la librement.</div></div>
+   ${sec('',cell({a:'addDay',attrs:'data-k=""',icon:ic('plus'),bg:'var(--tint);color:#000',title:'Séance vide',sub:'Tu choisis tous les exercices',chev:true}))}
+   ${sec('Modèles',Object.entries(TPL).map(([k,t])=>cell({a:'addDay',attrs:`data-k="${k}"`,title:esc(t.n),sub:esc(t.f),chev:true})).join(''))}`,{title:'Programme'});
 }
 function volumeByMuscle(){const v={};S.program.days.forEach(d=>d.ex.forEach(x=>{const m=EX[x.id].m;v[m]=(v[m]||0)+x.sets}));return Object.entries(v).sort((a,b)=>b[1]-a[1])}
 
@@ -1584,7 +1692,7 @@ function vProfile(){
   return page('Profil',{},
    `<div class="card profhead"><div class="avatar">${ic('person')}</div><div><div class="t2">${GOALS[p.goal].n}</div><div class="sub">${LEVELS[p.level]} · ${p.days} séances / semaine · ${p.place==='home'?'maison':'salle'}</div><div class="sub">${fmtNum(p.weight)} kg · ${p.height} cm · ${p.age} ans · IMC ${fmtNum(N.imc)}</div></div></div>
     ${profileForm()}
-    <div class="btnwrap"><button class="btn" data-a="saveProfile">Enregistrer et régénérer</button></div>
+    <div class="btnwrap"><button class="btn" data-a="saveProfile">${S.program&&S.program.custom?'Enregistrer':'Enregistrer et régénérer'}</button></div>
     <div class="sec-f" style="margin:-24px 16px 32px">Ton historique et tes charges sont conservés.</div>
     ${sec('Réglages',
       cell({icon:ic('speaker'),bg:'var(--red)',title:'Signal sonore',sub:'Bips 3-2-1 à la fin du repos',right:`<button class="sw ${S.settings.sound?'on':''}" data-a="toggleSet" data-k="sound" aria-label="Son"></button>`})
@@ -1724,7 +1832,7 @@ function gymCommit(){
   if(!S.profile){render();return}
   const machChanged=JSON.stringify([...(S.profile.noMach||[])].sort())!==JSON.stringify([...g.noMach].sort()), chainChanged=S.profile.chain!==g.chain;
   S.profile.chain=g.chain; S.profile.noMach=[...g.noMach];
-  if(machChanged&&S.profile.place!=='home'){S.program=generate(S.profile);ensureCycle();progDay=null}
+  if(machChanged&&S.profile.place!=='home'&&!S.program.custom){S.program=generate(S.profile);ensureCycle();progDay=null}
   save(); render(); if(machChanged||chainChanged) toast(machChanged?'Programme adapté à ta salle':'Salle : '+(CHAINS[g.chain]||CHAINS.autre).n);
 }
 function closeSheet(){
@@ -2646,7 +2754,7 @@ document.addEventListener('click',ev=>{
     case 'setF': {
       readForm(); let v=el.dataset.val; if(el.dataset.k==='days') v=+v; F[el.dataset.k]=v; haptic();
       if(!segUpdate(el)) document.querySelectorAll(`[data-a="setF"][data-k="${el.dataset.k}"]`).forEach(b=>b.classList.toggle('sel',b===el));
-      if(el.dataset.k==='days'){const s=$('#splitName'); if(s) s.textContent=SPLIT_NAME[v]}
+      if(el.dataset.k==='days'){ if(!(SPLITS[F.split]&&SPLITS[F.split].days.length===v)) F.split=AUTO_SPLIT[v]; const b=$('#splitBox'); if(b) b.innerHTML=splitRows(F) }
       if(el.dataset.k==='place'){const h=$('#homeEq'); if(h) h.style.display=v==='home'?'block':'none'; const g=$('#gymEq'); if(g) g.style.display=v==='home'?'none':'block'}
       break; }
     case 'progDay': { progDay=+el.dataset.val; segUpdate(el); haptic(); const dv=$('#dayView'); dv.innerHTML=vDay(progDay); dv.classList.remove('fadein'); void dv.offsetWidth; dv.classList.add('fadein'); refreshAnims(); break; }
@@ -2657,10 +2765,16 @@ document.addEventListener('click',ev=>{
       if(!(w>=35&&w<=250)) return toastErr('Indique un poids valide');
       if(!(h>=130&&h<=230)) return toastErr('Indique ta taille en cm');
       const first=!S.profile;
-      const daysChanged=!S.profile||S.profile.days!==+F.days;
-      S.profile={sex:F.sex,age,weight:w,height:h,level:F.level,goal:F.goal,days:+F.days,prio:(F.prio||[]).slice(0,3),place:F.place||'gym',equip:[...(F.equip||[])],hmax:+F.hmax||20,kbmax:+F.kbmax||16,chain:F.chain||'onair',noMach:[...(F.noMach||[])]};
-      S.program=generate(S.profile); if(daysChanged) S.cycle={done:[],skipped:[]}; progDay=null; F=null; save();
-      toast(first?'Programme généré':'Programme mis à jour'); go(first?'home':'program','fade'); break; }
+      const daysChanged=!S.profile||S.profile.days!==+F.days, nsplit=splitOf({days:+F.days,split:F.split}), splitChanged=!S.profile||splitOf(S.profile)!==nsplit;
+      S.profile={split:nsplit,sex:F.sex,age,weight:w,height:h,level:F.level,goal:F.goal,days:+F.days,prio:(F.prio||[]).slice(0,3),place:F.place||'gym',equip:[...(F.equip||[])],hmax:+F.hmax||20,kbmax:+F.kbmax||16,chain:F.chain||'onair',noMach:[...(F.noMach||[])]};
+      const fin=()=>{ S.program=generate(S.profile); if(daysChanged||splitChanged) S.cycle={done:[],skipped:[]}; progDay=null; EDIT=null; F=null; save();
+        toast(first?'Programme généré':'Programme mis à jour'); go(first?'home':'program','fade') };
+      if(S.program&&S.program.custom){
+        if(daysChanged||splitChanged) actionSheet({title:'Remplacer ton programme personnalisé ?',msg:`Le split « ${esc(SPLITS[nsplit].n)} » va générer un nouveau programme. Tes séances modifiées seront remplacées (ton historique est conservé).`,
+          actions:[{label:'Générer le nouveau programme',style:'destructive',fn:fin},{label:'Garder mon programme perso',fn:()=>{F=null;save();toast('Profil enregistré · programme perso conservé');go('program','fade')}}]});
+        else { F=null; save(); toast('Profil enregistré · programme perso conservé'); go('program','fade') }
+        break; }
+      fin(); break; }
     case 'start': unlockAudio(); startDay(+el.dataset.d); break;
     case 'resume': unlockAudio(); keepAwake(); go('workout','up'); break;
     case 'exinfo': exInfo(el.dataset.id, el.dataset.d!=null?+el.dataset.d:null); break;
@@ -2680,12 +2794,38 @@ document.addEventListener('click',ev=>{
     case 'phDel': { const all=phAll(); delete all[el.dataset.k]; phSave(); toast('Photo supprimée','trash'); if(_exCtx) exInfo(_exCtx[0],_exCtx[1]); if(view==='workout') render(); break; }
     case 'eqF': { if(!F) break; readForm(); const k=el.dataset.e, i=F.equip.indexOf(k); if(i>=0) F.equip.splice(i,1); else F.equip.push(k); haptic(); refreshPlaceUI(); break; }
     case 'eqMax': { if(!F) break; readForm(); const k=el.dataset.k, st=k==='hmax'?2:4, lo=k==='hmax'?2:4, hi=k==='hmax'?60:48; F[k]=Math.min(hi,Math.max(lo,(+F[k]||(k==='hmax'?20:16))+(+el.dataset.d)*st)); refreshPlaceUI(); break; }
-    case 'placeSave': { Object.assign(S.profile,{place:F.place||'gym',equip:[...(F.equip||[])],hmax:+F.hmax||20,kbmax:+F.kbmax||16}); F=null; S.program=generate(S.profile); ensureCycle(); progDay=null; save(); closeSheet(); render(); toast(S.profile.place==='home'?'Programme adapté à la maison':'Programme salle restauré', S.profile.place==='home'?'house':'dumbbell'); break; }
+    case 'placeSave': { Object.assign(S.profile,{place:F.place||'gym',equip:[...(F.equip||[])],hmax:+F.hmax||20,kbmax:+F.kbmax||16}); F=null; if(!S.program.custom) S.program=generate(S.profile); else toast('Lieu enregistré · ton programme perso n’est pas modifié'); ensureCycle(); progDay=null; save(); closeSheet(); render(); toast(S.profile.place==='home'?'Programme adapté à la maison':'Programme salle restauré', S.profile.place==='home'?'house':'dumbbell'); break; }
     case 'placeOnce': unlockAudio(); startDay(+el.dataset.d, otherPlaceDay(+el.dataset.d), true); break;
     case 'prio': prioSheet(); break;
     case 'prioToggle': { const g=el.dataset.g; if(prioSel.has(g)) prioSel.delete(g); else { if(prioSel.size>=3) return toastErr('3 groupes maximum'); prioSel.add(g) } el.classList.toggle('sel',prioSel.has(g)); haptic(); break; }
-    case 'prioSave': S.profile.prio=[...prioSel]; S.program=generate(S.profile); ensureCycle(); progDay=null; save(); closeSheet(); render(); toast('Priorités appliquées'); break;
+    case 'prioSave': S.profile.prio=[...prioSel]; if(S.program.custom){save();closeSheet();render();toast('Priorités enregistrées · ton programme perso n’est pas modifié');break} S.program=generate(S.profile); ensureCycle(); progDay=null; save(); closeSheet(); render(); toast('Priorités appliquées'); break;
     case 'prioF': { readForm(); const g=el.dataset.g, i=F.prio.indexOf(g); if(i>=0) F.prio.splice(i,1); else { if(F.prio.length>=3) return toastErr('3 groupes maximum'); F.prio.push(g) } el.classList.toggle('sel',F.prio.includes(g)); haptic(); break; }
+    case 'edOpen': EDIT=+el.dataset.d; progDay=EDIT; haptic(); edRefresh(); break;
+    case 'edDone': EDIT=null; haptic(); render(); break;
+    case 'edEx': edExSheet(+el.dataset.j); break;
+    case 'edSet': { const d=S.program.days[EDIT], x=d.ex[LIB.j], k=el.dataset.f, dd=+el.dataset.d;
+      if(k==='sets') x.sets=Math.min(8,Math.max(1,x.sets+dd));
+      if(k==='rmin'){ x.rmin=Math.min(50,Math.max(1,x.rmin+dd)); if(x.rmax<x.rmin) x.rmax=x.rmin }
+      if(k==='rmax'){ x.rmax=Math.min(50,Math.max(x.rmin,x.rmax+dd)) }
+      markCustom(d); haptic(); const j=LIB.j; edExSheet(j); edRefresh(); break; }
+    case 'edRest': { const d=S.program.days[EDIT]; d.ex[LIB.j].rest=+el.dataset.val; segUpdate(el); markCustom(d); haptic(); edRefresh(); break; }
+    case 'edRemove': { const d=S.program.days[EDIT], j=+el.dataset.j, nm=EX[d.ex[j].id].n; d.ex.splice(j,1); markCustom(d); closeSheet(); edRefresh(); toast(`${nm} retiré`,'trash'); break; }
+    case 'edMove': { const d=S.program.days[EDIT], j=+el.dataset.j, k=j+(+el.dataset.d); if(k<0||k>=d.ex.length) break; [d.ex[j],d.ex[k]]=[d.ex[k],d.ex[j]]; markCustom(d); haptic(); edRefresh(); break; }
+    case 'edAdd': libSheet('add'); break;
+    case 'edLib': libSheet(el.dataset.mode,+el.dataset.j); break;
+    case 'libM': LIB.m=el.dataset.m; haptic(); $('#libChips').innerHTML=libChips(); $('#libList').innerHTML=libList(); refreshAnims(); break;
+    case 'libPick': libPick(el.dataset.id); break;
+    case 'edDup': { const i=EDIT, d=S.program.days[i], c=JSON.parse(JSON.stringify(d)); c.n=d.n+' (copie)'; S.program.days.splice(i+1,0,c); remapCycle(x=>x>i?x+1:x); markCustom(c); EDIT=i+1; progDay=i+1; render(); toast('Jour dupliqué'); break; }
+    case 'edDelDay': { const i=EDIT, d=S.program.days[i]; actionSheet({title:`Supprimer « ${esc(d.n)} » ?`,msg:'Ton historique est conservé.',actions:[{label:'Supprimer ce jour',style:'destructive',fn:()=>{S.program.days.splice(i,1); remapCycle(x=>x===i?-1:x>i?x-1:x); markCustom(); EDIT=null; progDay=Math.max(0,i-1); render(); toast('Jour supprimé','trash')}}]}); break; }
+    case 'edDayMove': { const i=EDIT, k=i+(+el.dataset.d), D=S.program.days; if(k<0||k>=D.length) break; [D[i],D[k]]=[D[k],D[i]]; remapCycle(x=>x===i?k:x===k?i:x); markCustom(); EDIT=k; progDay=k; haptic(); render(); break; }
+    case 'addDayOpen': addDaySheet(); break;
+    case 'addDay': { const k=el.dataset.k, p=S.profile; let d;
+      if(k){ d=buildDay(k,p); d.edited=true } else d={k:'CUSTOM',n:'Séance '+(S.program.days.length+1),f:'Séance vide',place:p.place||'gym',ex:[],edited:true};
+      S.program.days.push(d); markCustom(d); const i=S.program.days.length-1; closeSheet(); EDIT=i; progDay=i; render(); window.scrollTo({top:0,behavior:'smooth'}); toast('Jour ajouté'); if(!k) setTimeout(()=>libSheet('add'),450); break; }
+    case 'splitOpen': splitSheet(); break;
+    case 'splitPick': { const k=el.dataset.k, apply=()=>{ S.profile.split=k; S.profile.days=SPLITS[k].days.length; S.program=generate(S.profile); S.cycle={done:[],skipped:[]}; EDIT=null; progDay=null; save(); closeSheet(); render(); toast(`Split : ${SPLITS[k].n}`) };
+      if(S.program.custom) actionSheet({title:'Remplacer ton programme personnalisé ?',msg:'Tes séances modifiées seront remplacées par le nouveau split. Ton historique est conservé.',actions:[{label:'Changer de split',style:'destructive',fn:apply}]}); else apply(); break; }
+    case 'resetAuto': actionSheet({title:'Revenir au programme automatique ?',msg:'Tes séances modifiées seront remplacées. Ton historique est conservé.',actions:[{label:'Revenir au programme auto',style:'destructive',fn:()=>{S.program=generate(S.profile);S.cycle={done:[],skipped:[]};EDIT=null;progDay=null;save();render();toast('Programme automatique rétabli')}}]}); break;
     case 'progJump': progDay=+el.dataset.i; render(); window.scrollTo({top:0,behavior:'smooth'}); break;
     case 'skipDay': { const i=+el.dataset.d; ensureCycle(); S.cycle.done.push(i); S.cycle.skipped.push(i); ensureCycle(); progDay=null; save(); closeSheet(); render(); toast('Séance sautée · planning réajusté','forward'); break; }
     case 'rappel': unlockAudio(); startDay(-1,buildRappel(el.dataset.g)); break;
@@ -2789,6 +2929,8 @@ document.addEventListener('click',ev=>{
 document.addEventListener('input',ev=>{
   if(ev.target.id==='fdQ'&&LG){ LG.q=ev.target.value; if(LG.nf){LG.nf=null; LG.offErr=null; const b=$('#lgBody'); if(b){b.innerHTML=lgBody(); const q=$('#fdQ'); if(q){q.focus(); q.setSelectionRange(q.value.length,q.value.length)}} return} fdRefresh(); }
   if(ev.target.id==='lgQtyIn'&&LG&&LG.sel){ const x=lgQtyParse(ev.target.value); if(x!=null){ LG.sel.qty=LG.sel.unit==='pc'?Math.round(x*100)/100:Math.round(x*10)/10; lgLive() } return; }
+  if(ev.target.id==='dayName'&&EDIT!=null){ const d=S.program.days[EDIT], v=ev.target.value.trim(); if(d&&v){ d.n=v; d.edited=true; S.program.custom=true; save() } return; }
+  if(ev.target.id==='libQ'&&LIB){ LIB.q=ev.target.value; const l=$('#libList'); if(l){l.innerHTML=libList();refreshAnims()} return; }
   if(ev.target.id==='npN'){ const z=$('#npSim'); if(z) z.innerHTML=npSimHTML(ev.target.value); }
 });
 /* Au toucher, tout le chiffre est sélectionné : la frappe le remplace (le relâchement du doigt annule parfois la sélection, d'où le second select au clic) */
