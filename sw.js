@@ -1,3 +1,4 @@
+/* © 2026 Coach Muscu (teno-cmd). Tous droits réservés. */
 /* Service worker de Coach Muscu
    - Rend l'appli installable sur Android (Chrome, Samsung Internet…)
    - Permet de l'ouvrir hors connexion

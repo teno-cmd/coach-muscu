@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+<!-- © 2026 Coach Muscu (teno-cmd). Tous droits réservés. Reproduction interdite sans autorisation (voir LICENSE). -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -440,6 +441,8 @@ button[disabled]{pointer-events:none}
 'use strict';
 /* =========================================================
    COACH MUSCU — PWA mono-fichier
+   © 2026 Coach Muscu (teno-cmd). Tous droits réservés.
+   Reproduction, modification ou redistribution interdites sans autorisation écrite (voir LICENSE).
    Données : localStorage (clé KEY). Aucune dépendance externe.
    ========================================================= */
 
@@ -1709,6 +1712,7 @@ function vProfile(){
      +cell({a:'import',icon:ic('down'),bg:'var(--green)',title:'Importer une sauvegarde',chev:true})
      +cell({a:'reset',icon:ic('trash'),bg:'var(--red)',title:'<span style="color:var(--red)">Tout réinitialiser</span>'}),
      'Tes données restent uniquement sur ce téléphone.')}
+    <div class="sec-f center" style="padding:8px 20px 28px">© ${new Date().getFullYear()} Coach Muscu · Tous droits réservés</div>
     <input type="file" id="importFile" accept="application/json,.json" style="display:none">
     <div class="sec-f center" style="margin-bottom:20px">Coach Muscu · ${p.place==='home'?'Édition maison':'Édition '+esc((CHAINS[gymOf().chain]||CHAINS.autre).n).replace(/^Autre enseigne$/,'salle')}</div>`);
 }
@@ -2976,7 +2980,8 @@ document.addEventListener('change',ev=>{
 });
 
 /* ---------- Icône & manifeste générés (PWA mono-fichier) ---------- */
-function setupPWA(){ /* icônes et manifeste déclarés en dur dans <head> (fichiers PNG du dépôt) */
+function setupPWA(){ /* icônes et manifeste déclarés en dur dans <head>
+<!-- © 2026 Coach Muscu (teno-cmd). Tous droits réservés. Reproduction interdite sans autorisation (voir LICENSE). --> (fichiers PNG du dépôt) */
   /* Service worker : requis par Android (Samsung Internet notamment) pour proposer l'installation, et permet l'ouverture hors connexion. */
   if(!('serviceWorker' in navigator) || !(location.protocol==='https:'||location.hostname==='localhost')) return;
   const reg=()=>navigator.serviceWorker.register('sw.js').catch(()=>{});
