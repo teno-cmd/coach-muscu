@@ -2536,7 +2536,7 @@ function recents(){
 /* Aliments courants proposés tant qu'il n'y a pas d'historique */
 const STARTERS=['oeuf','poulet','riz','pates_cuites','banane','pain_complet','skyr','whey','avoine','pomme'];
 const swp=(inner,kind,id)=>`<div class="swp" data-del="${kind}" data-id="${esc(id)}"><div class="swp-act"><button data-a="swDel">Supprimer</button></div><div class="swp-c">${inner}</div></div>`;
-const mpCell=(c,o,lbl)=>swp(cell({a:'fdPick',attrs:`data-k="mp_${c}"`,icon:ic('barcode'),bg:'var(--indigo)',title:`<span class="ct sm">${esc(o.n)}${lbl?' <span class="cs">(mon produit)</span>':''}</span>`,sub:`${r1(o.v[0])} kcal / 100 g · P ${fmtNum(+(+o.v[1]).toFixed(1))} · G ${fmtNum(+(+o.v[2]).toFixed(1))} · L ${fmtNum(+(+o.v[3]).toFixed(1))}`,chev:true}),'prod',c);
+const mpCell=(c,o,lbl)=>swp(cell({a:'fdPick',attrs:`data-k="mp_${c}"`,icon:ic('barcode'),bg:'var(--indigo)',title:`<span class="ct sm">${esc(o.n)}${lbl?' <span class="cs">(mon produit)</span>':''}</span>`,sub:`${r1(o.v[0])} kcal / 100 ${o.u||'g'} · P ${fmtNum(+(+o.v[1]).toFixed(1))} · G ${fmtNum(+(+o.v[2]).toFixed(1))} · L ${fmtNum(+(+o.v[3]).toFixed(1))}`,chev:true}),'prod',c);
 function fdRefresh(){const l=$('#fdList'); if(l) l.innerHTML=fdList(); else lgRefresh()}
 function fdList(){
   const L=LG, q=norm(L.q).trim(), mine=Object.entries(S.myprod||{});
@@ -2553,7 +2553,7 @@ function fdList(){
   let off;
   if(/^\d{8,14}$/.test(q)) off=sec('Produits du commerce',cell({a:'offSearch',icon:ic('barcode'),bg:'var(--blue)',title:`Chercher le code-barres ${esc(q)}`,chev:true}));
   else if(L.offLoading) off=sec('Produits du commerce',cell({icon:ic('clock',1),bg:'var(--gray)',title:'Recherche en cours…',sub:'Open Food Facts'}));
-  else if(L.off&&L.offFor===q) off=L.off.length?sec('Produits du commerce',L.off.map((o,i)=>cell({a:'offPick',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(o.n)}</span>`,sub:`${r1(o.v[0])} kcal / 100 g · P ${fmtNum(+o.v[1].toFixed(1))} · G ${fmtNum(+o.v[2].toFixed(1))} · L ${fmtNum(+o.v[3].toFixed(1))}`,chev:true})).join(''),'Valeurs des étiquettes (base collaborative Open Food Facts).'):sec('Produits du commerce',cell({title:'<span class="cs">Aucun produit trouvé pour cette recherche.</span>'}));
+  else if(L.off&&L.offFor===q) off=L.off.length?sec('Produits du commerce',L.off.map((o,i)=>cell({a:'offPick',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(o.n)}${o.u==='ml'?' 🥤':''}</span>`,sub:`${r1(o.v[0])} kcal / 100 ${o.u} · P ${fmtNum(+o.v[1].toFixed(1))} · G ${fmtNum(+o.v[2].toFixed(1))} · L ${fmtNum(+o.v[3].toFixed(1))}`,chev:true})).join(''),'Valeurs des étiquettes (base collaborative Open Food Facts).'):sec('Produits du commerce',cell({title:'<span class="cs">Aucun produit trouvé pour cette recherche.</span>'}));
   else off=sec('Produits du commerce',cell({a:'offSearch',icon:ic('search'),bg:'var(--blue)',title:`<span class="ct sm">Rechercher « ${esc(L.q.trim())} » dans les produits du commerce</span>`,sub:'Marques et produits emballés · Open Food Facts',chev:true}));
   return `${err}${mp.length?sec('Mes produits',mp.map(([c,o])=>mpCell(c,o)).join('')):''}
     ${fd.length?sec('Aliments',fd.map(([k,f])=>cell({a:'fdPick',attrs:`data-k="${k}"`,title:`<span class="ct sm">${esc(f.n)}</span>`,sub:`${f.v[0]} kcal / 100 ${f.u||'g'} · P ${f.v[1]} · G ${f.v[2]} · L ${f.v[3]}`,chev:true})).join('')):''}
@@ -2571,20 +2571,21 @@ function simFoods(name,n=6){
 function npSimHTML(name){
   const sims=simFoods(name||'');
   if(!sims.length) return `<div class="sec-f" style="padding:0 20px 18px">${name&&name.trim()?'Aucun aliment proche trouvé : essaie un autre mot (ex. « champignons », « jambon »), ou l’estimation en ligne.':'Tape le nom du produit : les aliments similaires apparaîtront ici pour remplir les valeurs en un appui.'}</div>`;
-  return sec('Aliments similaires',sims.map(o=>cell({a:'npFill',attrs:`data-k="${o.k}"`,title:`<span class="ct sm">${esc(o.f.n)}</span>`,sub:`${o.f.v[0]} kcal · P ${o.f.v[1]} · G ${o.f.v[2]} · L ${o.f.v[3]} (pour 100 g)`,right:`<span class="tint" style="font-weight:600;font-size:15px">Utiliser</span>`})).join(''),'« Utiliser » remplit les valeurs ci-dessous avec la moyenne de cet aliment.');
+  return sec('Aliments similaires',sims.map(o=>cell({a:'npFill',attrs:`data-k="${o.k}"`,title:`<span class="ct sm">${esc(o.f.n)}</span>`,sub:`${o.f.v[0]} kcal · P ${o.f.v[1]} · G ${o.f.v[2]} · L ${o.f.v[3]} (pour 100 ${o.f.u||'g'})`,right:`<span class="tint" style="font-weight:600;font-size:15px">Utiliser</span>`})).join(''),'« Utiliser » remplit les valeurs ci-dessous avec la moyenne de cet aliment.');
 }
 function nfForm(){
   const L=LG;
   return `<div class="card alert" style="margin-bottom:14px">${ic('warn')}<div><b style="font-size:15px">Code ${esc(L.nf.code)} absent de la base</b><div class="sub" style="font-size:13px;line-height:18px">Ajoute-le une fois : recopie l’étiquette, ou pars d’un aliment similaire si les valeurs ne sont pas indiquées. Le prochain scan le retrouvera.</div></div></div>
    ${sec('Nom du produit',`<label class="cell"><span class="cbody"><span class="ct">Nom</span></span><input class="cin" id="npN" value="${esc(L.nf.n)}" placeholder="Champignons de Paris…" style="width:190px;text-align:right" autocomplete="off"></label>`)}
    <div id="npSim">${npSimHTML(L.nf.n)}</div>
-   ${sec('Valeurs pour 100 g',`<label class="cell"><span class="cbody"><span class="ct">Calories</span></span><input class="cin" id="npK" type="number" inputmode="decimal" placeholder="0"><span class="unit">kcal</span></label>
+   ${sec('Valeurs nutritionnelles',`<div class="cell stack">${seg('npU',[['g','Solide · pour 100 g'],['ml','Boisson · pour 100 ml']],LG.nfU||(isLiquidName(L.nf.n)?'ml':'g'),'npU')}</div><label class="cell"><span class="cbody"><span class="ct">Calories</span></span><input class="cin" id="npK" type="number" inputmode="decimal" placeholder="0"><span class="unit">kcal</span></label>
     <label class="cell"><span class="cbody"><span class="ct">Protéines</span></span><input class="cin" id="npP" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
     <label class="cell"><span class="cbody"><span class="ct">Glucides</span></span><input class="cin" id="npC" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
     <label class="cell"><span class="cbody"><span class="ct">Lipides</span></span><input class="cin" id="npF" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
-    <label class="cell"><span class="cbody"><span class="ct">Portion habituelle</span><span class="cs">optionnel</span></span><input class="cin" id="npS" type="number" inputmode="decimal" placeholder="100"><span class="unit">g</span></label>`,'<span id="npNote">Recopie le tableau « pour 100 g » de l’emballage, ou touche « Utiliser » sur un aliment similaire au-dessus.</span>')}
+    <label class="cell"><span class="cbody"><span class="ct">Portion habituelle</span><span class="cs">optionnel</span></span><input class="cin" id="npS" type="number" inputmode="decimal" placeholder="${(LG.nfU||(isLiquidName(L.nf.n)?'ml':'g'))==='ml'?'250':'100'}"><span class="unit" id="npSU">${LG.nfU||(isLiquidName(L.nf.n)?'ml':'g')}</span></label>`,'<span id="npNote">Recopie le tableau « pour 100 g » de l’emballage, ou touche « Utiliser » sur un aliment similaire au-dessus.</span>')}
    <div class="btnwrap"><button class="btn" data-a="npSave">Enregistrer dans Mes produits</button><button class="btn gray" data-a="npOnline">${ic('search')} Estimer d’après des produits similaires en ligne</button><button class="btn gray" data-a="nfCancel">Annuler</button></div>`;
 }
+function npUnit(u,manual){ if(!LG) return; LG.nfU=u; if(manual) LG.nfUm=true; const b=document.querySelector(`[data-a="npU"][data-val="${u}"]`); if(b) segUpdate(b); const su=$('#npSU'); if(su) su.textContent=u; const sv=$('#npS'); if(sv) sv.placeholder=u==='ml'?'250':'100' }
 function npSetVals(v,note){[['npK',v[0]],['npP',v[1]],['npC',v[2]],['npF',v[3]]].forEach(([id,x])=>{const e=$('#'+id); if(e) e.value=String(Math.round(x*10)/10)}); const n=$('#npNote'); if(n) n.textContent=note; haptic()}
 function selMac(){
   const s=LG.sel; if(s.kind==='rx'){const r=rxOf(s.key);return rxMac(r,s.k)}
@@ -2616,7 +2617,7 @@ function lgBody(){
   }
   const tabs=`<div class="segwrap" style="margin-bottom:12px">${seg('lgTab',[['food','Aliments & produits'],['rx','Recettes'],['quick','Rapide']],L.tab==='off'?'food':L.tab,'lgTab')}</div>`;
   let body='';
-  if(L.tab==='food'||L.tab==='off') body=`<div class="srch">${ic('search')}<input id="fdQ" type="search" enterkeyhint="search" placeholder="Aliment, produit ou code-barres" value="${esc(L.q)}" autocomplete="off"><button class="scanbtn" data-a="scanOpen" aria-label="Scanner un code-barres">${ic('barcode')}</button></div>${L.nf?nfForm():''}<div id="fdList">${L.nf?'':fdList()}</div>`;
+  if(L.tab==='food'||L.tab==='off') body=`<div class="srch">${ic('search')}<input id="fdQ" type="search" enterkeyhint="search" placeholder="Aliment, produit ou code-barres" value="${esc(L.q)}" autocomplete="off"></div>${L.nf?nfForm():''}<div id="fdList">${L.nf?'':fdList()}</div>`;
   else if(L.tab==='rx'){const list=[...RX,...Object.values(RX_DYN)]; body=sec('Recettes et shakers de l’app',list.map(r=>{const m=rxMac(r);return cell({a:'rxPick',attrs:`data-id="${r.id}"`,icon:`<span class="emo">${r.em}</span>`,bg:'var(--bg4)',title:`<span class="ct sm">${esc(r.n)}</span>`,sub:`${r1(m.kcal)} kcal · P ${r1(m.p)} · G ${r1(m.c)} · L ${r1(m.f)}`,chev:true})}).join(''))}
   else body=sec('Saisie rapide',`<label class="cell"><span class="cbody"><span class="ct">Nom</span></span><input class="cin" id="qkN" placeholder="Restaurant, plat…" style="width:170px;text-align:right"></label>
       <label class="cell"><span class="cbody"><span class="ct">Calories</span></span><input class="cin" id="qkK" type="number" inputmode="numeric" placeholder="0"><span class="unit">kcal</span></label>
@@ -2635,7 +2636,24 @@ function loadZX(){ if(window.ZXing) return Promise.resolve(window.ZXing); if(_zx
 function zxReader(ZX){const h=new Map();h.set(ZX.DecodeHintType.POSSIBLE_FORMATS,[ZX.BarcodeFormat.EAN_13,ZX.BarcodeFormat.EAN_8,ZX.BarcodeFormat.UPC_A,ZX.BarcodeFormat.UPC_E]);h.set(ZX.DecodeHintType.TRY_HARDER,true);return new ZX.BrowserMultiFormatReader(h,300)}
 /* Énergie pour 100 g en kcal ; si l'étiquette ne donne que des kJ, conversion (1 kcal = 4,184 kJ). */
 function offKcal(p){const n=p&&p.nutriments; if(!n) return null; const k=n['energy-kcal_100g']; if(k!=null&&k!=='') return +k; const kj=n['energy-kj_100g']??n['energy_100g']; return kj!=null&&kj!==''?Math.round(+kj/4.184):null}
-function offMap(p){const nm=(p.product_name_fr||p.product_name||'Produit').trim(), br=p.brands?p.brands.split(',')[0].trim():''; return {n:nm+(br&&!norm(nm).includes(norm(br))?' · '+br:''),v:[offKcal(p)||0,+p.nutriments.proteins_100g||0,+p.nutriments.carbohydrates_100g||0,+p.nutriments.fat_100g||0],sv:+p.serving_quantity||0}}
+const LIQ_RX=/\b(lait|jus|soda|cola|coca|boisson|eau|eaux|bi[eè]re|vin|sirop|smoothie|limonade|nectar|th[eé] glac[eé]|ice tea|energy|milk ?shake|k[eé]fir|lassi|cidre|champagne|whisky|vodka|rhum|pastis|caf[eé] frapp[eé]|latte|drink|shot)\b/i;
+const isLiquidName=n=>LIQ_RX.test(n||'');
+function offMap(p){
+  const nm=(p.product_name_fr||p.product_name||'Produit').trim(), br=p.brands?p.brands.split(',')[0].trim():'';
+  const qs=String(p.quantity||''), mq=qs.match(/(\d+(?:[.,]\d+)?)\s*(ml|cl|l)\b/i); let vol=0;
+  if(mq){const x=parseFloat(mq[1].replace(',','.')), u=mq[2].toLowerCase(); vol=u==='l'?x*1000:u==='cl'?x*10:x}
+  if(!vol&&p.product_quantity_unit==='ml') vol=+p.product_quantity||0;
+  const cats=(p.categories_tags||[]).join(' ');
+  const liquid=!!vol||p.product_quantity_unit==='ml'||/beverages|boissons|drinks|waters|juices|sodas|en:milks\b/.test(cats)||isLiquidName(nm);
+  const can=/soda|cola|beer|biere|energy|bière/.test(norm(cats+' '+nm));
+  return {n:nm+(br&&!norm(nm).includes(norm(br))?' · '+br:''),v:[offKcal(p)||0,+p.nutriments.proteins_100g||0,+p.nutriments.carbohydrates_100g||0,+p.nutriments.fat_100g||0],sv:+p.serving_quantity||0,
+    u:liquid?'ml':'g',pc:liquid&&vol>0&&vol<=2000?[Math.round(vol),vol<=500&&can?'canette':'bouteille']:null};
+}
+/* Sélection prête à afficher pour un produit (boisson : en ml, 1 canette/bouteille si format individuel) */
+function selFromProd(o){
+  const ind=o.u==='ml'&&o.pc&&o.pc[0]<=500;
+  return {kind:'off',name:o.n,v:o.v,u:o.u||'g',pc:o.pc||null,unit:ind?'pc':'g',qty:ind?1:(o.sv||(o.u==='ml'?250:100))};
+}
 async function openScanner(){
   if(_scan) return;
   const ov=document.createElement('div'); ov.className='scan';
@@ -2689,20 +2707,20 @@ async function scanPhotoFile(file){
   try{ const ZX=await loadZX(), rd=zxReader(ZX), url=URL.createObjectURL(file); const r=await rd.decodeFromImageUrl(url); URL.revokeObjectURL(url); closeScanner(); barcodeLookup(r.getText()) }
   catch(e){ if(m) m.textContent='Code-barres illisible : rapproche-toi, bien à plat et net, ou vise en direct.'; else toastErr('Code-barres illisible') }
 }
-const OFF_F='product_name,product_name_fr,brands,nutriments,serving_quantity,code';
+const OFF_F='product_name,product_name_fr,brands,nutriments,serving_quantity,code,quantity,product_quantity,product_quantity_unit,categories_tags';
 async function offFetch(url){ const ac=new AbortController(), to=setTimeout(()=>ac.abort(),12000);
   try{ const r=await fetch(url,{signal:ac.signal}); if(r.status===429) throw new Error('rate'); if(!r.ok) throw new Error('http'); return await r.json() }
   catch(e){ throw new Error(e.name==='AbortError'?'slow':e.message==='rate'?'rate':navigator.onLine===false?'offline':'http') } finally{ clearTimeout(to) } }
 const OFF_ERR={rate:'Trop de recherches depuis ton réseau mobile (limite d’Open Food Facts, partagée avec d’autres abonnés). Réessaie dans une minute, en Wi-Fi, ou scanne le code-barres.',slow:'Open Food Facts met trop de temps à répondre. Réessaie dans un instant.',offline:'Pas de connexion : utilise les aliments, tes produits ou la saisie rapide.',http:'Open Food Facts ne répond pas : service saturé, ou limite de recherches atteinte sur ton réseau mobile. Réessaie dans une minute ou en Wi-Fi. Le scan de code-barres reste plus fiable.'};
 async function barcodeLookup(code){
   if(!LG||!$('#lgBody')) logSheet();
-  LG.tab='food'; LG.q=''; LG.sel=null; LG.offErr=null; LG.nf=null;
+  LG.tab='food'; LG.q=''; LG.sel=null; LG.offErr=null; LG.nf=null; LG.nfU=null; LG.nfUm=false;
   const mine=(S.myprod||{})[code];
-  if(mine){ LG.sel={kind:'off',name:mine.n,v:mine.v,qty:mine.sv||100,unit:'g'}; lgRefresh(); toast('Produit trouvé dans Mes produits','checkCircle'); return }
+  if(mine){ LG.sel=selFromProd(mine); lgRefresh(); toast('Produit trouvé dans Mes produits','checkCircle'); return }
   LG.offLoading=true; lgRefresh();
   try{ const j=await offFetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${OFF_F}`), p=j.product;
     if(offKcal(p)==null) LG.nf={code,n:p&&(p.product_name_fr||p.product_name)||''};
-    else { const o=offMap(p); LG.sel={kind:'off',name:o.n,v:o.v,qty:o.sv||100,unit:'g'}; toast('Produit trouvé','checkCircle') }
+    else { const o=offMap(p); LG.sel=selFromProd(o); toast('Produit trouvé','checkCircle') }
   }catch(e){ LG.offErr=OFF_ERR[e.message]||OFF_ERR.http; LG.nf={code,n:''} }
   LG.offLoading=false; lgRefresh();
 }
@@ -2882,19 +2900,20 @@ document.addEventListener('click',ev=>{
         else if(g>0&&/\b(g|ml)\b/.test(e.qty)) LG.sel={kind:'off',name:e.name,v:[e.kcal/g*100,e.p/g*100,e.c/g*100,e.f/g*100],unit:'g',qty:g};
         else { const {id,t,meal,_n,...c}=e; addLog({...c,meal:LG.meal}); render(); haptic(); toast(`+${r1(e.kcal)} kcal · ${e.name}`); lgRefresh(); break; } }
       lgRefresh(); $('#shScroll').scrollTop=0; break; }
-    case 'fdPick': { const k0=el.dataset.k, f=k0.startsWith('mp_')?(()=>{const o=S.myprod[k0.slice(3)];return {n:o.n,v:o.v}})():FOODS[k0]; LG.sel={kind:'food',name:f.n,v:f.v,u:f.u,pc:f.pc,unit:f.pc?'pc':'g',qty:f.pc?1:100}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
+    case 'fdPick': { const k0=el.dataset.k, f=k0.startsWith('mp_')?S.myprod[k0.slice(3)]:FOODS[k0]; LG.sel=k0.startsWith('mp_')?selFromProd(f):{kind:'food',name:f.n,v:f.v,u:f.u,pc:f.pc,unit:f.pc?'pc':'g',qty:f.pc?1:(f.u==='ml'?250:100)}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'rxPick': { const r=rxOf(el.dataset.id); LG.sel={kind:'rx',key:r.id,name:r.n,k:1}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
-    case 'offPick': { const o=LG.off[+el.dataset.i]; LG.sel={kind:'off',name:o.n,v:o.v,qty:o.sv||100,unit:'g'}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
+    case 'offPick': { const o=LG.off[+el.dataset.i]; LG.sel=selFromProd(o); lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'offSearch': offSearch(); break;
     case 'scanOpen': openScanner(); break;
     case 'swDel': { const w=el.closest('.swp'); if(w) swDelete(w); break; }
-    case 'npFill': { const k=el.dataset.k, f=k.startsWith('mp_')?(S.myprod||{})[k.slice(3)]:FOODS[k]; if(!f) break; npSetVals(f.v,`Valeurs moyennes de « ${f.n} » (tables Ciqual / USDA). À ajuster si l’emballage indique autre chose.`); const nn=$('#npN'); if(nn&&!nn.value.trim()) nn.value=f.n; break; }
+    case 'npFill': { const k=el.dataset.k, f=k.startsWith('mp_')?(S.myprod||{})[k.slice(3)]:FOODS[k]; if(!f) break; npSetVals(f.v,`Valeurs moyennes de « ${f.n} » (tables Ciqual / USDA). À ajuster si l’emballage indique autre chose.`); if(f.u==='ml'||f.u==='g') npUnit(f.u==='ml'?'ml':'g'); const nn=$('#npN'); if(nn&&!nn.value.trim()) nn.value=f.n; break; }
     case 'npOnline': npOnline(); break;
-    case 'nfCancel': LG.nf=null; LG.offErr=null; lgRefresh(); break;
+    case 'npU': npUnit(el.dataset.val,true); haptic(); break;
+    case 'nfCancel': LG.nfU=null; LG.nf=null; LG.offErr=null; lgRefresh(); break;
     case 'npSave': { const v=id=>parseFloat(String(($('#'+id)||{}).value||'').replace(',','.'))||0, k=v('npK'), pp=v('npP'), c=v('npC'), f=v('npF'), sv=v('npS');
       const kc=k||(pp*4+c*4+f*9); if(!kc) return toastErr('Indique au moins les calories pour 100 g');
       const n=(($('#npN')||{}).value||'').trim()||('Produit '+LG.nf.code); if(!S.myprod) S.myprod={}; LG.offErr=null;
-      S.myprod[LG.nf.code]={n,v:[kc,pp,c,f],sv}; save(); LG.sel={kind:'off',name:n,v:[kc,pp,c,f],qty:sv||100,unit:'g'}; LG.nf=null; lgRefresh(); toast('Ajouté à Mes produits'); break; }
+      const u=LG.nfU||(isLiquidName(n)?'ml':'g'); S.myprod[LG.nf.code]={n,v:[kc,pp,c,f],sv,u}; save(); LG.sel=selFromProd(S.myprod[LG.nf.code]); LG.nf=null; LG.nfU=null; lgRefresh(); toast('Ajouté à Mes produits'); break; }
     case 'scanClose': closeScanner(); break;
     case 'scanPhoto': { let inp=$('#scanFile'); if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.setAttribute('capture','environment');inp.id='scanFile';inp.style.display='none';document.body.appendChild(inp)} inp.value=''; inp.click(); break; }
     case 'lgBack': LG.sel=null; lgRefresh(); break;
@@ -2902,7 +2921,7 @@ document.addEventListener('click',ev=>{
     case 'lgTab': { const q=$('#fdQ'); if(q) LG.q=q.value; const o=$('#offQ'); if(o) LG.offQ=o.value; LG.tab=el.dataset.val; segUpdate(el); haptic(); setTimeout(lgRefresh,200); break; }
     case 'lgUnit': { const s=LG.sel; if(s.unit===el.dataset.val) break; if(el.dataset.val==='pc'){s.unit='pc';s.qty=Math.max(.5,Math.round(s.qty/s.pc[0]*2)/2)} else {s.unit='g';s.qty=Math.round(s.qty*s.pc[0])} segUpdate(el); setTimeout(lgRefresh,200); break; }
     case 'lgQty': { const s=LG.sel, d=+el.dataset.d;
-      if(s.kind==='rx') s.k=Math.min(4,Math.max(.25,s.k+d*.25)); else if(s.unit==='pc') s.qty=Math.max(.5,s.qty+d*.5); else { const st=s.qty<50||(s.qty===50&&d<0)?5:10; s.qty=Math.max(5,s.qty+d*st) }
+      if(s.kind==='rx') s.k=Math.min(4,Math.max(.25,s.k+d*.25)); else if(s.unit==='pc') s.qty=Math.max(.5,s.qty+d*.5); else { const st=s.u==='ml'?(s.qty<100||(s.qty===100&&d<0)?10:25):(s.qty<50||(s.qty===50&&d<0)?5:10); s.qty=Math.max(5,s.qty+d*st) }
       haptic(); lgRefresh(); break; }
     case 'lgConfirm': lgConfirm(); break;
     case 'quickAdd': { const v=id=>parseFloat(String(($('#'+id)||{}).value||'').replace(',','.'))||0, kcal=v('qkK'), p=v('qkP'), c=v('qkC'), f=v('qkF');
@@ -2963,7 +2982,7 @@ document.addEventListener('input',ev=>{
   if(ev.target.id==='lgQtyIn'&&LG&&LG.sel){ const x=lgQtyParse(ev.target.value); if(x!=null){ LG.sel.qty=LG.sel.unit==='pc'?Math.round(x*100)/100:Math.round(x*10)/10; lgLive() } return; }
   if(ev.target.id==='dayName'&&EDIT!=null){ const d=S.program.days[EDIT], v=ev.target.value.trim(); if(d&&v){ d.n=v; d.edited=true; S.program.custom=true; save() } return; }
   if(ev.target.id==='libQ'&&LIB){ LIB.q=ev.target.value; const l=$('#libList'); if(l){l.innerHTML=libList();refreshAnims()} return; }
-  if(ev.target.id==='npN'){ const z=$('#npSim'); if(z) z.innerHTML=npSimHTML(ev.target.value); }
+  if(ev.target.id==='npN'){ const z=$('#npSim'); if(z) z.innerHTML=npSimHTML(ev.target.value); if(LG&&!LG.nfUm) npUnit(isLiquidName(ev.target.value)?'ml':'g'); }
 });
 /* Au toucher, tout le chiffre est sélectionné : la frappe le remplace (le relâchement du doigt annule parfois la sélection, d'où le second select au clic) */
 document.addEventListener('focusin',ev=>{ const e=ev.target; if(e.id!=='lgQtyIn') return; e.dataset.fresh='1'; setTimeout(()=>{try{e.select()}catch(_){}},0) });
