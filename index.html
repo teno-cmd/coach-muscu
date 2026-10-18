@@ -458,6 +458,15 @@ const MONEY={
   amazonTag:'',
   support:{url:'https://ko-fi.com/tenoh12',label:'Ko-fi'},
 };
+/* MENTIONS LÉGALES — affichées dans Profil > « Mentions légales et confidentialité ».
+   - editor : nom affiché comme éditeur (pseudo accepté pour une édition non professionnelle).
+   - contact : adresse e-mail de contact. Vide = la ligne de contact est cachée.
+   - updated : date de dernière mise à jour du texte. */
+const LEGAL={
+  editor:'teno-cmd',
+  contact:'tenohlogic@gmail.com',
+  updated:'18 octobre 2026',
+};
 const KEY = 'coachmuscu_v1';
 
 /* ---------- Groupes musculaires ---------- */
@@ -1805,6 +1814,7 @@ function vProfile(){
      +cell({a:'import',icon:ic('down'),bg:'var(--green)',title:'Importer une sauvegarde',chev:true})
      +cell({a:'reset',icon:ic('trash'),bg:'var(--red)',title:'<span style="color:var(--red)">Tout réinitialiser</span>'}),
      'Tes données restent uniquement sur ce téléphone.')}
+    ${sec('À propos',cell({a:'legal',icon:ic('info'),bg:'var(--gray)',title:'Mentions légales et confidentialité',chev:true}))}
     <div class="sec-f center" style="padding:8px 20px 28px">© ${new Date().getFullYear()} Coach Muscu · Tous droits réservés</div>
     <input type="file" id="importFile" accept="application/json,.json" style="display:none">
     <div class="sec-f center" style="margin-bottom:20px">Coach Muscu · ${p.place==='home'?'Édition maison':'Édition '+esc((CHAINS[gymOf().chain]||CHAINS.autre).n).replace(/^Autre enseigne$/,'salle')}</div>`);
@@ -2350,6 +2360,34 @@ function rxShopSec(r){const ids=[...new Set(r.ing.map(([id])=>id))].filter(id=>S
 function eqShopSec(){return sec('Équiper ma salle à la maison',Object.entries(SHOP_EQ).map(([k,q])=>shopLink(`${EQUIP[k].em} ${esc(EQUIP[k].n)}`,'Voir sur Amazon',shopURL(q))
   +`<a class="cell" href="${shopURL(q,'decathlon')}" target="_blank" rel="noopener" style="--inset:16px;min-height:36px;padding-top:4px"><span class="cbody"><span class="cs">Voir chez Decathlon</span></span>${CH}</a>`).join(''),shopNote())}
 const supportSec=()=>MONEY.support.url?sec('Soutenir Coach Muscu',`<a class="cell" href="${MONEY.support.url}" target="_blank" rel="noopener"><span class="cico" style="background:var(--pink)">❤️</span><span class="cbody"><span class="ct">Offrir un café au développeur</span><span class="cs">Don ponctuel via ${esc(MONEY.support.label)}, sans abonnement</span></span>${CH}</a>`,'L’appli reste 100 % gratuite. Les dons aident à payer son développement.'):'';
+
+/* ---------- Mentions légales et confidentialité ---------- */
+function legalSheet(){
+  const T=(t,s)=>`<div class="cell top"><span class="cbody"><span class="ct sm" style="font-weight:600">${t}</span><span class="cs" style="line-height:20px;margin-top:2px">${s}</span></span></div>`;
+  const A=(t,s,u)=>`<a class="cell" href="${u}" target="_blank" rel="noopener"><span class="cbody"><span class="ct sm">${t}</span>${s?`<span class="cs">${s}</span>`:''}</span>${CH}</a>`;
+  const mail=LEGAL.contact?`<a href="mailto:${esc(LEGAL.contact)}" style="color:var(--blue)">${esc(LEGAL.contact)}</a>`:'';
+  openSheet(`<div class="pad"><div class="hero-ic">${ic('info')}</div><h2 class="t2 center">Mentions légales et confidentialité</h2><div class="sub center mt">Mis à jour le ${esc(LEGAL.updated)}</div></div>
+   ${sec('Éditeur',T('Coach Muscu',`Application gratuite éditée à titre non professionnel par ${esc(LEGAL.editor)}.${mail?`<br>Contact : ${mail}`:''}`))}
+   ${sec('Hébergeur',T('GitHub, Inc. (GitHub Pages)','88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis')+A('github.com','','https://github.com'))}
+   ${sec('Tes données',
+      T('Tout reste sur ton téléphone','Profil, programme, séances, journal alimentaire et photos sont enregistrés uniquement dans la mémoire de ton navigateur. Il n’y a ni compte ni serveur Coach Muscu : le développeur ne reçoit et ne voit aucune de tes données.')
+     +T('Ni pub, ni pistage','Aucune publicité, aucune mesure d’audience, aucun cookie de suivi dans l’appli.')
+     +T('Caméra','Utilisée seulement pendant le scan d’un code-barres. L’image est lue sur le téléphone, puis ni enregistrée ni envoyée.')
+     +T('Tes droits','Tu peux exporter tes données (Profil › Exporter une sauvegarde), tout effacer (Profil › Tout réinitialiser) ou simplement supprimer l’appli. Pour toute question, écris au contact ci-dessus. Tu peux aussi saisir la CNIL.'))}
+   ${sec('Services extérieurs',
+      T('Open Food Facts','Quand tu cherches un produit ou scannes un code-barres, ta recherche ou le code est envoyé à Open Food Facts (base collaborative et libre), sans aucune autre information sur toi.')
+     +T('jsDelivr','Le lecteur de code-barres est téléchargé depuis jsDelivr la première fois que tu ouvres le scanner.')
+     +T('GitHub','Comme tout hébergeur, GitHub peut enregistrer l’adresse IP des visites pour la sécurité du site.')
+     +T('Liens externes','Amazon, Decathlon, Ko-fi, YouTube et les sources scientifiques s’ouvrent hors de l’appli. Ces sites appliquent leurs propres règles de confidentialité et de cookies.'),
+     'Ces services ne reçoivent ces informations que si tu utilises la fonction concernée.')}
+   ${sec('Liens d’achat et dons',
+      T('Liens « Où l’acheter »',MONEY.amazonTag?'Certains liens sont affiliés : en tant que Partenaire Amazon, Coach Muscu réalise un bénéfice sur les achats remplissant les conditions requises. Le prix reste le même pour toi.':'Les liens « Où l’acheter » mènent vers des boutiques en ligne, à titre indicatif. S’ils deviennent affiliés, cette page et les fiches concernées l’indiqueront.')
+     +T('Dons',`Les dons via ${esc(MONEY.support.label||'Ko-fi')} sont libres et ponctuels. Ils ne débloquent rien : l’appli est la même pour tout le monde.`))}
+   ${sec('Santé',
+      T('Conseils généraux','Les programmes, charges et repères nutritionnels sont donnés à titre informatif. Ils ne remplacent pas l’avis d’un médecin, d’un kiné ou d’un diététicien.')
+     +T('Écoute ton corps','Demande un avis médical avant de commencer en cas de problème de santé, de blessure, de grossesse ou de traitement. Arrête un exercice en cas de douleur.'))}
+   ${sec('Propriété intellectuelle',T('© '+new Date().getFullYear()+' Coach Muscu · Tous droits réservés','Le code, les textes et les visuels de l’appli ne peuvent être reproduits, modifiés ou redistribués sans autorisation écrite. Valeurs nutritionnelles : tables Ciqual (ANSES) et USDA ; données produits : Open Food Facts (licence ODbL).'))}`,{title:'Informations'});
+}
 
 function rxSheet(id,k){rxId=id;rxK=k||1;openSheet(`<div id="rxBody">${rxBody()}</div>`,{title:'Recette'})}
 function rxBody(){
@@ -2986,6 +3024,7 @@ document.addEventListener('click',ev=>{
     case 'rx': rxSheet(el.dataset.id, el.dataset.k?+el.dataset.k:1); break;
     case 'rxK': { rxK=Math.min(3,Math.max(.5,Math.round((rxK+(+el.dataset.d)*.25)*4)/4)); const b=$('#rxBody'); if(b) b.innerHTML=rxBody(); haptic(); break; }
     case 'nutriSrc': nutriSrcSheet(); break;
+    case 'legal': legalSheet(); break;
     case 'logDay': { const n=shiftDay(curDay(),+el.dataset.d); LOGDAY=n>=todayK()?null:n; haptic(); render(); break; }
     case 'logAdd': logSheet(el.dataset.m); break;
     case 'logItem': { const k=curDay(), e=logOf(k).find(x=>x.id===el.dataset.id); if(!e) break;
@@ -3076,7 +3115,7 @@ document.addEventListener('click',ev=>{
       const u=URL.createObjectURL(blob), l=document.createElement('a'); l.href=u; l.download='coach-muscu-sauvegarde-'+new Date().toISOString().slice(0,10)+'.json';
       document.body.appendChild(l); l.click(); l.remove(); setTimeout(()=>URL.revokeObjectURL(u),3000); break; }
     case 'import': $('#importFile').click(); break;
-    case 'reset': actionSheet({title:'Tout réinitialiser ?',msg:'Profil, programme et historique seront effacés de ce téléphone.',actions:[{label:'Effacer toutes les données',style:'destructive',fn:()=>{localStorage.removeItem(KEY);S=defState();F=null;obStep=0;go('onboard')}}]}); break;
+    case 'reset': actionSheet({title:'Tout réinitialiser ?',msg:'Profil, programme, historique, journal et photos seront effacés de ce téléphone.',actions:[{label:'Effacer toutes les données',style:'destructive',fn:()=>{localStorage.removeItem(KEY);localStorage.removeItem(PH_KEY);_ph=null;S=defState();F=null;obStep=0;go('onboard')}}]}); break;
   }
 });
 document.addEventListener('input',ev=>{
