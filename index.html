@@ -2842,6 +2842,7 @@ function fdList(){
         :sec('Aliments courants',STARTERS.filter(k=>FOODS[k]).map(k=>{const f=FOODS[k];return cell({a:'fdPick',attrs:`data-k="${k}"`,title:`<span class="ct sm">${esc(f.n)}</span>`,sub:`${f.v[0]} kcal / 100 ${f.u||'g'}`,chev:true})}).join(''),'Tes aliments récents apparaîtront ici pour les ajouter en un appui.')}`;
   }
   const toks=foodToks(q), hit=foodHit(toks);
+  const oc=Object.entries(offcAll()).filter(([c,o])=>!(S.myprod||{})[c]&&hit(o.n)).sort((a,b)=>(b[1].k-a[1].k)||(b[1].t-a[1].t)).slice(0,10);
   const mp=mine.filter(([c,o])=>hit(o.n)), fd=Object.entries(FOODS).filter(([k,f])=>hit(f.n)).slice(0,15);
   const seen=new Set(fd.map(([k,f])=>norm(f.n))), cq=ciqSearch(toks,40).filter(([c,f])=>!seen.has(f._n)).slice(0,40-fd.length);
   if(!CIQ) loadCiq();
@@ -2851,6 +2852,7 @@ function fdList(){
   else if(L.off&&L.offFor===q) off=L.off.length?sec('Produits du commerce',L.off.map((o,i)=>cell({a:'offPick',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(o.n)}${o.u==='ml'?' 🥤':''}</span>`,sub:`${r1(o.v[0])} kcal / 100 ${o.u} · P ${fmtNum(+o.v[1].toFixed(1))} · G ${fmtNum(+o.v[2].toFixed(1))} · L ${fmtNum(+o.v[3].toFixed(1))}`,chev:true})).join(''),'Valeurs des étiquettes (base collaborative Open Food Facts).'):sec('Produits du commerce',cell({title:'<span class="cs">Aucun produit trouvé pour cette recherche.</span>'}));
   else off=sec('Produits du commerce',cell({a:'offSearch',icon:ic('search'),bg:'var(--blue)',title:`<span class="ct sm">Rechercher « ${esc(L.q.trim())} » dans les produits du commerce</span>`,sub:'Marques et produits emballés · Open Food Facts',chev:true}));
   return `${err}${mp.length?sec('Mes produits',mp.map(([c,o])=>mpCell(c,o)).join('')):''}
+    ${oc.length?sec('Produits déjà trouvés',oc.map(([c,o])=>offcCell(c,o)).join(''),'Gardés sur ton téléphone : disponibles tout de suite, même sans connexion.'):''}
     ${fd.length||cq.length?sec('Aliments',fd.map(([k,f])=>cell({a:'fdPick',attrs:`data-k="${k}"`,title:`<span class="ct sm">${esc(f.n)}</span>`,sub:`${f.v[0]} kcal / 100 ${f.u||'g'} · P ${fmtNum(f.v[1])} · G ${fmtNum(f.v[2])} · L ${fmtNum(f.v[3])}`,chev:true})).join('')
       +cq.map(([c,f])=>cell({a:'fdPick',attrs:`data-k="cq_${c}"`,title:`<span class="ct sm">${esc(f.n)}</span>`,sub:`${f.v[0]} kcal / 100 ${f.u} · P ${fmtNum(f.v[1])} · G ${fmtNum(f.v[2])} · L ${fmtNum(f.v[3])}`,chev:true})).join(''),
       CIQ?'Valeurs moyennes de la table Ciqual 2025 (ANSES).':'Chargement de la base complète des aliments…'):(CIQ?'':sec('Aliments',cell({icon:ic('clock',1),bg:'var(--gray)',title:'Chargement de la base des aliments…'})))}
@@ -2910,7 +2912,7 @@ const editBtns=()=>`<div class="btnwrap" style="margin-top:-14px"><button class=
 function selFromEntry(e){
   const R=e.ref;
   if(R&&R.kind==='rx'&&rxOf(R.key)) return {kind:'rx',key:R.key,name:e.name,k:R.k||1};
-  if(R&&R.v) return {kind:R.kind,name:R.name||e.name,v:R.v,u:R.u,pc:R.pc,unit:R.unit||'g',qty:R.qty||100};
+  if(R&&R.v) return {kind:R.kind,code:R.code||'',name:R.name||e.name,v:R.v,u:R.u,pc:R.pc,unit:R.unit||'g',qty:R.qty||100};
   if(e.src==='rx'){ const r=[...RX,...Object.values(RX_DYN)].find(x=>x.n===e.name); if(r){ const k=parseFloat(String(e.qty||'').replace(/[^\d,.]/g,'').replace(',','.'))||1; return {kind:'rx',key:r.id,name:r.n,k} } }
   const hit=Object.entries(FOODS).find(([k,f])=>norm(f.n)===norm(e.name)), g=parseFloat(String(e.qty||'').replace(',','.')), byW=g>0&&/\b(g|ml)\b/.test(e.qty||'');
   if(hit){const f=hit[1]; return {kind:'food',name:f.n,v:f.v,u:f.u,pc:f.pc,unit:'g',qty:byW?g:100}}
@@ -2965,13 +2967,24 @@ function offMap(p){
   const cats=(p.categories_tags||[]).join(' ');
   const liquid=!!vol||p.product_quantity_unit==='ml'||/beverages|boissons|drinks|waters|juices|sodas|en:milks\b/.test(cats)||isLiquidName(nm);
   const can=/soda|cola|beer|biere|energy|bière/.test(norm(cats+' '+nm));
-  return {n:nm+(br&&!norm(nm).includes(norm(br))?' · '+br:''),v:[offKcal(p)||0,+p.nutriments.proteins_100g||0,+p.nutriments.carbohydrates_100g||0,+p.nutriments.fat_100g||0],sv:+p.serving_quantity||0,
+  return {code:p.code||'',n:nm+(br&&!norm(nm).includes(norm(br))?' · '+br:''),v:[offKcal(p)||0,+p.nutriments.proteins_100g||0,+p.nutriments.carbohydrates_100g||0,+p.nutriments.fat_100g||0],sv:+p.serving_quantity||0,
     u:liquid?'ml':'g',pc:liquid&&vol>0&&vol<=2000?[Math.round(vol),vol<=500&&can?'canette':'bouteille']:null};
 }
+/* ----- Mémoire des produits Open Food Facts déjà trouvés (scan, recherche) -----
+   Rangée à part (clé _off) : le produit revient ensuite instantanément, même hors connexion. 600 produits maximum. */
+const OFFC_KEY=KEY+'_off'; let _offc=null;
+function offcAll(){ if(_offc) return _offc; try{_offc=JSON.parse(localStorage.getItem(OFFC_KEY))||{}}catch(e){_offc={}} return _offc }
+function offcPut(o,used){
+  if(!o||!o.code||!o.v) return; const m=offcAll(), old=m[o.code]||{};
+  m[o.code]={n:o.n,v:o.v.map(x=>Math.round(x*10)/10),u:o.u||'g',pc:o.pc||null,sv:o.sv||0,t:Date.now(),k:(old.k||0)+(used?1:0)};
+  const ks=Object.keys(m); if(ks.length>600) ks.sort((a,b)=>(m[a].k-m[b].k)||(m[a].t-m[b].t)).slice(0,ks.length-600).forEach(k=>delete m[k]);
+  try{localStorage.setItem(OFFC_KEY,JSON.stringify(m))}catch(e){}
+}
+const offcCell=(c,o)=>cell({a:'fdPick',attrs:`data-k="oc_${c}"`,icon:ic('barcode'),bg:'var(--blue)',title:`<span class="ct sm">${esc(o.n)}${o.u==='ml'?' 🥤':''}</span>`,sub:`${r1(o.v[0])} kcal / 100 ${o.u||'g'} · P ${fmtNum(o.v[1])} · G ${fmtNum(o.v[2])} · L ${fmtNum(o.v[3])}`,chev:true});
 /* Sélection prête à afficher pour un produit (boisson : en ml, 1 canette/bouteille si format individuel) */
 function selFromProd(o){
   const ind=o.u==='ml'&&o.pc&&o.pc[0]<=500;
-  return {kind:'off',name:o.n,v:o.v,u:o.u||'g',pc:o.pc||null,unit:ind?'pc':'g',qty:ind?1:(o.sv||(o.u==='ml'?250:100))};
+  return {kind:'off',code:o.code||'',name:o.n,v:o.v,u:o.u||'g',pc:o.pc||null,sv:o.sv||0,unit:ind?'pc':'g',qty:ind?1:(o.sv||(o.u==='ml'?250:100))};
 }
 async function openScanner(){
   if(_scan) return;
@@ -3036,10 +3049,11 @@ async function barcodeLookup(code){
   LG.tab='food'; LG.q=''; LG.sel=null; LG.offErr=null; LG.nf=null; LG.nfU=null; LG.nfUm=false;
   const mine=(S.myprod||{})[code];
   if(mine){ LG.sel=selFromProd(mine); lgRefresh(); toast('Produit trouvé dans Mes produits','checkCircle'); return }
+  const known=offcAll()[code]; if(known){ LG.sel=selFromProd({...known,code}); lgRefresh(); toast('Produit déjà connu','checkCircle'); return }
   LG.offLoading=true; lgRefresh();
   try{ const j=await offFetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${OFF_F}`), p=j.product;
     if(offKcal(p)==null) LG.nf={code,n:p&&(p.product_name_fr||p.product_name)||''};
-    else { const o=offMap(p); LG.sel=selFromProd(o); toast('Produit trouvé','checkCircle') }
+    else { const o=offMap(p); o.code=o.code||code; offcPut(o); LG.sel=selFromProd(o); toast('Produit trouvé','checkCircle') }
   }catch(e){ LG.offErr=OFF_ERR[e.message]||OFF_ERR.http; LG.nf={code,n:''} }
   LG.offLoading=false; lgRefresh();
 }
@@ -3071,8 +3085,9 @@ async function npOnline(){
 }
 function lgConfirm(){
   const s=LG.sel, m=selMac(); const qty=s.kind==='rx'?`portion ×${fmtNum(s.k)}`:s.unit==='pc'?`${fmtNum(s.qty)} ${s.pc[1]}${s.qty>1?'s':''}`:`${s.qty} ${s.u||'g'}`;
-  const ref=s.kind==='rx'?{kind:'rx',key:s.key,k:s.k}:{kind:s.kind,name:s.name,v:s.v,u:s.u,pc:s.pc,unit:s.unit,qty:s.qty};
+  const ref=s.kind==='rx'?{kind:'rx',key:s.key,k:s.k}:{kind:s.kind,code:s.code||undefined,name:s.name,v:s.v,u:s.u,pc:s.pc,unit:s.unit,qty:s.qty};
   const entry={meal:LG.meal,name:s.name,qty,kcal:m.kcal,p:m.p,c:m.c,f:m.f,src:s.kind,ref};
+  if(s.kind==='off'&&s.code&&!(S.myprod||{})[s.code]) offcPut({code:s.code,n:s.name,v:s.v,u:s.u,pc:s.pc,sv:s.sv},true);
   if(LG.edit) return lgSaveEdit(entry,`Modifié · ${r1(m.kcal)} kcal`);
   addLog(entry);
   const k=r1(m.kcal); closeSheet(); render(); toast(`+${k} kcal ajoutées`);
@@ -3244,9 +3259,9 @@ document.addEventListener('click',ev=>{
         else if(g>0&&/\b(g|ml)\b/.test(e.qty)) LG.sel={kind:'off',name:e.name,v:[e.kcal/g*100,e.p/g*100,e.c/g*100,e.f/g*100],unit:'g',qty:g};
         else { const {id,t,meal,_n,...c}=e; addLog({...c,meal:LG.meal}); render(); haptic(); toast(`+${r1(e.kcal)} kcal · ${e.name}`); lgRefresh(); break; } }
       lgRefresh(); $('#shScroll').scrollTop=0; break; }
-    case 'fdPick': { const k0=el.dataset.k, f=k0.startsWith('mp_')?S.myprod[k0.slice(3)]:k0.startsWith('cq_')?(CIQ||{})[k0.slice(3)]:FOODS[k0]; if(!f) break; LG.sel=k0.startsWith('mp_')?selFromProd(f):{kind:'food',name:f.n,v:f.v,u:f.u,pc:f.pc||null,unit:f.pc?'pc':'g',qty:f.pc?1:(f.u==='ml'?250:100)}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
+    case 'fdPick': { const k0=el.dataset.k, f=k0.startsWith('mp_')?S.myprod[k0.slice(3)]:k0.startsWith('oc_')?offcAll()[k0.slice(3)]:k0.startsWith('cq_')?(CIQ||{})[k0.slice(3)]:FOODS[k0]; if(!f) break; LG.sel=k0.startsWith('mp_')||k0.startsWith('oc_')?selFromProd({...f,code:k0.slice(3)}):{kind:'food',name:f.n,v:f.v,u:f.u,pc:f.pc||null,unit:f.pc?'pc':'g',qty:f.pc?1:(f.u==='ml'?250:100)}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'rxPick': { const r=rxOf(el.dataset.id); LG.sel={kind:'rx',key:r.id,name:r.n,k:1}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
-    case 'offPick': { const o=LG.off[+el.dataset.i]; LG.sel=selFromProd(o); lgRefresh(); $('#shScroll').scrollTop=0; break; }
+    case 'offPick': { const o=LG.off[+el.dataset.i]; offcPut(o); LG.sel=selFromProd(o); lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'offSearch': offSearch(); break;
     case 'scanOpen': openScanner(); break;
     case 'swDel': { const w=el.closest('.swp'); if(w) swDelete(w); break; }
@@ -3322,7 +3337,7 @@ document.addEventListener('click',ev=>{
       const u=URL.createObjectURL(blob), l=document.createElement('a'); l.href=u; l.download='coach-muscu-sauvegarde-'+new Date().toISOString().slice(0,10)+'.json';
       document.body.appendChild(l); l.click(); l.remove(); setTimeout(()=>URL.revokeObjectURL(u),3000); break; }
     case 'import': $('#importFile').click(); break;
-    case 'reset': actionSheet({title:'Tout réinitialiser ?',msg:'Profil, programme, historique, journal et photos seront effacés de ce téléphone.',actions:[{label:'Effacer toutes les données',style:'destructive',fn:()=>{localStorage.removeItem(KEY);localStorage.removeItem(PH_KEY);_ph=null;S=defState();F=null;obStep=0;go('onboard')}}]}); break;
+    case 'reset': actionSheet({title:'Tout réinitialiser ?',msg:'Profil, programme, historique, journal et photos seront effacés de ce téléphone.',actions:[{label:'Effacer toutes les données',style:'destructive',fn:()=>{localStorage.removeItem(KEY);localStorage.removeItem(PH_KEY);_ph=null;localStorage.removeItem(OFFC_KEY);_offc=null;S=defState();F=null;obStep=0;go('onboard')}}]}); break;
   }
 });
 document.addEventListener('input',ev=>{
