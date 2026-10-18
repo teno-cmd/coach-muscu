@@ -1578,7 +1578,7 @@ function vOnboard(){
   return page('Ton profil',{left:`<button class="tbtn" data-a="obBack">${ic('chevL')}Retour</button>`,sub:'Ces informations servent à générer ton programme et à estimer tes charges de départ.'},
     profileForm()+`<div class="btnwrap"><button class="btn" data-a="saveProfile">Générer mon programme</button></div>`);
 }
-function profileForm(){
+function profileForm(inSheet){
   if(!F) F=S.profile?{place:'gym',hmax:20,kbmax:16,...S.profile,prio:[...(S.profile.prio||[])],equip:[...(S.profile.equip||[])]}:{sex:'H',age:'',weight:'',height:'',level:'int',goal:'masse',days:4,prio:[],place:'gym',equip:[],hmax:20,kbmax:16};
   const inp=(id,label,val,unit,mode,ph)=>`<label class="cell"><span class="cbody"><span class="ct">${label}</span></span><input class="cin" id="${id}" type="number" inputmode="${mode}" placeholder="${ph}" value="${val}"><span class="unit">${unit}</span></label>`;
   return sec('Informations',
@@ -1589,7 +1589,7 @@ function profileForm(){
       `<div class="cell stack"><span class="ct">Niveau</span>${seg('level',[['deb','Débutant'],['int','Intermédiaire'],['adv','Avancé']],F.level)}<span class="cs">Débutant : moins de 6 mois · Intermédiaire : 6 mois à 3 ans · Avancé : plus de 3 ans.</span></div>
        <div class="cell stack"><span class="ct">Séances par semaine</span>${seg('days',[[2,'2'],[3,'3'],[4,'4'],[5,'5'],[6,'6']],F.days)}</div><div id="splitBox">${splitRows(F)}</div>`)
    +sec('Zones à travailler',`<div id="focusBox">${focusRows(F)}</div>`,FOCUS_NOTE)
-   +sec('Lieu d’entraînement',placeRows(F),'À la maison, les machines sont remplacées par des alternatives adaptées à ton matériel, en gardant les mêmes muscles.')
+   +(inSheet?'':sec('Lieu d’entraînement',placeRows(F),'À la maison, les machines sont remplacées par des alternatives adaptées à ton matériel, en gardant les mêmes muscles.'))
    +sec('Objectif',Object.entries(GOALS).map(([k,g])=>cell({a:'setF',attrs:`data-k="goal" data-val="${k}"`,cls:'goal '+(F.goal===k?'sel':''),icon:ic(GOAL_UI[k][0],1),bg:GOAL_UI[k][1],title:g.n,sub:g.d,right:`<span class="ck">${ic('check')}</span>`})).join(''))
    +sec('Muscles prioritaires (optionnel)',Object.entries(PRIO).map(([g,o])=>cell({a:'prioF',attrs:`data-g="${g}"`,cls:'goal '+(F.prio.includes(g)?'sel':''),title:o.n,right:`<span class="ck">${ic('check')}</span>`})).join(''),'Jusqu’à 3 groupes : plus de volume et placés en début de séance.');
 }
@@ -1633,15 +1633,36 @@ function vHome(){
      <div class="tmbs">${d.ex.map(x=>`<div class="tmb">${figSVG(x.id)}</div>`).join('')}</div>
      <div class="pills"><span class="pill">${ic((d.place||p.place)==='home'?'house':'dumbbell',1)} ${(d.place||p.place)==='home'?'Maison':'Salle'}</span><span class="pill">${ic('timer')} ≈ ${estDuration(d)} min</span><span class="pill">${d.ex.length} exercices</span><span class="pill">${nSets} séries</span></div>
      <div class="btnrow"><button class="btn" data-a="start" data-d="${nd}">${ic('play',1)} Commencer</button><button class="btn gray ico" data-a="fiche" data-d="${nd}" aria-label="Fiche de séance">${ic('list')}</button><button class="btn gray ico" data-a="change" aria-label="Changer de séance">${ic('swap')}</button></div></div>
-   ${sec('Nutrition',cell({a:'nav',attrs:'data-v="nutrition"',icon:ic('fork',1),bg:'var(--green)',title:`${Math.round(logTot(todayK()).kcal).toLocaleString('fr-FR')} / ${N.kcal.toLocaleString('fr-FR')} kcal aujourd’hui`,sub:(NUT().omad?`OMAD · repas à ${fmtH(NUT().meal)} · `:'')+`Protéines : ${Math.round(logTot(todayK()).p)} / ${N.prot} g · touche pour ajouter un repas`,chev:true}),null,true)}
-   ${sec('Temps de repos',
-      cell({icon:ic('bolt'),bg:'var(--orange)',title:'Polyarticulaires lourds',sub:'Squat, développé couché, rowing barre, presse',value:'3 min',vcls:'t'})
+   ${adviceCard()}
+   ${sec('Nutrition',cell({a:'goJournal',icon:ic('fork',1),bg:'var(--green)',title:`${Math.round(logTot(todayK()).kcal).toLocaleString('fr-FR')} / ${N.kcal.toLocaleString('fr-FR')} kcal aujourd’hui`,sub:(NUT().omad?`OMAD · repas à ${fmtH(NUT().meal)} · `:'')+`Protéines : ${Math.round(logTot(todayK()).p)} / ${N.prot} g · touche pour ajouter un repas`,chev:true}),null,true)}
+   ${sec('',cell({a:'restSheet',icon:ic('timer'),bg:'var(--orange)',title:'Temps de repos conseillés',sub:'3 min, 2 min, 90 s ou 60 s selon l’exercice, et pourquoi',chev:true}))}
+   ${standalone?'':sec('',cell({a:'installGuide',icon:ic('down'),bg:'var(--blue)',title:'Installer l’appli sur ton écran d’accueil',sub:'Tuto adapté à ton téléphone : plein écran et utilisable hors connexion.',chev:true}))}`);
+}
+/* Conseil du jour : une seule carte, choisie selon la situation (matériel maison, protéines, récupération),
+   sinon un conseil qui change chaque jour. */
+function adviceCard(){
+  const p=S.profile, h=new Date().getHours(), T=logTot(todayK()), M=macros(p), last=S.history[0];
+  const note=MONEY.amazonTag?'Lien affilié : Coach Muscu touche une petite commission, sans surcoût pour toi.':null;
+  let c=null;
+  if(p.place==='home'){ let best=null,bn=0;
+    Object.keys(SHOP_EQ).filter(k=>!(p.equip||[]).includes(k)).forEach(k=>{const pp={...p,equip:[...(p.equip||[]),k]}; const n=Object.keys(EX).filter(id=>EX[id].req&&!hasEq(id,p)&&hasEq(id,pp)).length; if(n>bn){bn=n;best=k}});
+    if(best&&bn>=3) c={t:`Avec ${({elastique:'des élastiques',halt:'des haltères',kettlebell:'une kettlebell',traction:'une barre de traction',banc:'un banc',barre:'une barre et des disques'})[best]||EQUIP[best].n.toLowerCase()}, ton programme maison gagnerait ${bn} exercices`,s:'Plus de variété et des charges mieux adaptées à ta progression.',l:shopLink(`${EQUIP[best].em} ${esc(EQUIP[best].n)}`,'Voir sur Amazon',shopURL(SHOP_EQ[best]))}; }
+  if(!c&&h>=17&&!NUT().omad&&T.kcal>0&&T.p<M.prot*.75) c={t:`Il te manque ${r0(M.prot-T.p)} g de protéines aujourd’hui`,s:'Idées rapides : skyr, fromage blanc, thon, œufs ou un shaker de whey.',l:gearLink('barres','Pratiques à glisser dans le sac de sport')};
+  if(!c&&last&&Date.now()-last.d<36*3600e3&&(last.ex||[]).some(x=>EX[x.id]&&['quads','ischios','fessiers'].includes(EX[x.id].m))) c={t:'Grosse séance de jambes : pense à la récupération',s:'Quelques minutes de rouleau sur les cuisses aident à mieux récupérer.',l:gearLink('rouleau','Le plus simple pour commencer')};
+  if(!c){ const TIPS=[
+      {t:'La créatine est le complément le plus étudié en musculation',s:'3 à 5 g par jour suffisent, sans phase de charge. Touche pour en savoir plus.',a:'crea'},
+      {t:'Dors 7 à 9 heures par nuit',s:'C’est pendant le sommeil que tes muscles se reconstruisent.'},
+      {t:'Pèse tes aliments quelques jours',s:'Ton compteur de calories devient beaucoup plus précis.',l:gearLink('balance','Une balance précise au gramme')},
+      {t:'Monte les charges petit à petit',s:'Quand toutes tes séries atteignent le haut de la fourchette, l’appli te propose plus lourd.'},
+      {t:'Pense à bien t’hydrater',s:`Environ ${fmtNum(Math.round(p.weight*.035*10)/10)} L d’eau par jour pour toi, un peu plus les jours de séance.`,l:gearLink('gourde')}];
+    c=TIPS[Math.floor(Date.now()/dayMs)%TIPS.length]; }
+  return sec('Conseil du jour',cell({a:c.a,icon:ic('sparkles'),bg:'var(--indigo)',title:`<span style="font-weight:600">${c.t}</span>`,sub:c.s,chev:!!c.a})+(c.l||''),c.l?note:null,true);
+}
+function restInfoSheet(){ openSheet(`<div class="pad"><div class="t2">Temps de repos</div><div class="sub">Le minuteur se lance tout seul après chaque série, avec le bon temps.</div></div>${sec('',cell({icon:ic('bolt'),bg:'var(--orange)',title:'Polyarticulaires lourds',sub:'Squat, développé couché, rowing barre, presse',value:'3 min',vcls:'t'})
      +cell({icon:ic('dumbbell',1),bg:'var(--blue)',title:'Polyarticulaires guidés',sub:'Machines convergentes, haltères, tirages',value:'2 min',vcls:'t'})
      +cell({icon:ic('target'),bg:'var(--purple)',title:'Isolation',sub:'Élévations, curls, extensions, leg curl',value:'90 s',vcls:'t'})
      +cell({icon:ic('flame'),bg:'var(--teal)',title:'Abdos',value:'60 s',vcls:'t'})
-     +cell({a:'science',icon:ic('book'),bg:'var(--indigo)',title:'Ce que dit la science',chev:true}),null,true)}
-   ${standalone?'':sec('',cell({a:'installGuide',icon:ic('down'),bg:'var(--blue)',title:'Installer l’appli sur ton écran d’accueil',sub:'Tuto adapté à ton téléphone : plein écran et utilisable hors connexion.',chev:true}))}`);
-}
+     +cell({a:'science',icon:ic('book'),bg:'var(--indigo)',title:'Ce que dit la science',chev:true}))}`,{title:'Repos'}) }
 function sciSheet(){
   openSheet(`<div class="pad"><div class="hero-ic">${ic('book')}</div><h2 class="t2 center">Pourquoi ces temps de repos ?</h2></div>
    ${sec('Polyarticulaires lourds · 3 min',cell({title:'<span class="ct sm">Chez des pratiquants entraînés, 3 min de repos ont produit plus de force et d’hypertrophie que 1 min, sur 8 semaines à programme identique.</span>',sub:'Schoenfeld et al., 2016 — Journal of Strength & Conditioning Research'}))}
@@ -1812,32 +1833,48 @@ function histSheet(i){
 function vProfile(){
   const p=S.profile, N=nutrition(p);
   return page('Profil',{},
-   `<div class="card profhead"><div class="avatar">${ic('person')}</div><div><div class="t2">${GOALS[p.goal].n}</div><div class="sub">${LEVELS[p.level]} · ${p.days} séances / semaine · ${p.place==='home'?'maison':'salle'}</div><div class="sub">${fmtNum(p.weight)} kg · ${p.height} cm · ${p.age} ans · IMC ${fmtNum(N.imc)}</div></div></div>
-    ${profileForm()}
-    <div class="btnwrap"><button class="btn" data-a="saveProfile">${S.program&&S.program.custom?'Enregistrer':'Enregistrer et régénérer'}</button></div>
-    <div class="sec-f" style="margin:-24px 16px 32px">Ton historique et tes charges sont conservés.</div>
-    ${sec('Réglages',
-      cell({icon:ic('speaker'),bg:'var(--red)',title:'Signal sonore',sub:'Bips 3-2-1 à la fin du repos',right:`<button class="sw ${S.settings.sound?'on':''}" data-a="toggleSet" data-k="sound" aria-label="Son"></button>`})
-     +cell({icon:ic('wave'),bg:'var(--orange)',title:'Vibrations',sub:'Retours haptiques (iOS 18+) et vibrations Android',right:`<button class="sw ${S.settings.vibe?'on':''}" data-a="toggleSet" data-k="vibe" aria-label="Vibrations"></button>`})
-     +(STATS.code?cell({icon:ic('wave'),bg:'var(--teal)',title:'Statistiques anonymes',sub:'Aide à savoir combien de personnes utilisent l’appli. Aucune donnée personnelle.',right:`<button class="sw ${S.settings.noStats?'':'on'}" data-a="statsToggle" aria-label="Statistiques anonymes"></button>`}):'')
-     +cell({a:'testSound',icon:ic('play',1),bg:'var(--blue)',title:'Tester le son',chev:true})
-     +cell({icon:ic('fork',1),bg:'var(--green)',title:'Mode OMAD',sub:'Un repas par jour : réglages dans l’onglet Nutrition',right:`<button class="sw ${NUT().omad?'on':''}" data-a="omadToggle" aria-label="Mode OMAD"></button>`}),
-     'Sur iOS 17 et plus, le son est joué même en mode silencieux. Monte le volume avant ta séance.')}
-    ${p.place==='home'?eqShopSec(p)+sec('Pour s’entraîner chez soi',gearLink('tapis','Pour le gainage, les abdos et les étirements')+gearLink('corde','Échauffement et cardio en 10 minutes'),shopNote()):''}
-    ${sec('Accessoires de salle',gearLink('sangles','Pour garder la prise sur les tirages lourds')+gearLink('ceinture','Pour les squats et soulevés lourds')+gearLink('gants','Pour protéger tes mains')+gearLink('genouilleres','Pour garder les genoux au chaud sur les squats')+gearLink('gourde'),shopNote())}
-    ${sec('Récupération',gearLink('rouleau','5 min sur les muscles travaillés')+gearLink('pistolet','Pour détendre les muscles après la séance'),shopNote())}
-    ${sec('Faire connaître l’appli',shareCell(),'Plus Coach Muscu a d’utilisateurs, plus elle peut rester gratuite.')}
-    ${supportSec()}
-    ${isStandalone()?'':sec('Application',cell({a:'installGuide',icon:ic('down'),bg:'var(--blue)',title:'Installer sur l’écran d’accueil',chev:true}))}
-    ${sec('Données',
-      cell({a:'export',icon:ic('share'),bg:'var(--blue)',title:'Exporter une sauvegarde',chev:true})
-     +cell({a:'import',icon:ic('down'),bg:'var(--green)',title:'Importer une sauvegarde',chev:true})
-     +cell({a:'reset',icon:ic('trash'),bg:'var(--red)',title:'<span style="color:var(--red)">Tout réinitialiser</span>'}),
-     'Tes données restent uniquement sur ce téléphone.')}
-    ${sec('À propos',cell({a:'legal',icon:ic('info'),bg:'var(--gray)',title:'Mentions légales et confidentialité',chev:true}))}
-    <div class="sec-f center" style="padding:8px 20px 28px">© ${new Date().getFullYear()} Coach Muscu · Tous droits réservés</div>
+   `<button class="card profhead" data-a="editProfile" style="display:flex;width:calc(100% - 32px);text-align:left;align-items:center"><div class="avatar">${ic('person')}</div><div style="flex:1;min-width:0"><div class="t2">${GOALS[p.goal].n}</div><div class="sub">${LEVELS[p.level]} · ${p.days} séances / semaine · ${p.place==='home'?'maison':'salle'}</div><div class="sub">${fmtNum(p.weight)} kg · ${p.height} cm · ${p.age} ans · IMC ${fmtNum(N.imc)}</div></div><span class="tint" style="font-size:15px;font-weight:600;flex:none">Modifier</span></button>
+    ${sec('',
+      cell({a:'placeOpen',icon:ic(p.place==='home'?'house':'dumbbell',1),bg:'var(--teal)',title:'Lieu d’entraînement',sub:p.place==='home'?equipSummary(p):'Salle · '+esc((CHAINS[gymOf().chain]||CHAINS.autre).n),chev:true})
+     +cell({a:'settings',icon:ic('speaker'),bg:'var(--red)',title:'Réglages',sub:'Son, vibrations, mode OMAD, statistiques',chev:true}))}
+    ${sec('',cell({a:'gear',icon:ic('dumbbell',1),bg:'var(--orange)',title:'Mon matériel',sub:p.place==='home'?'Compléter mon matériel, accessoires, récupération':'Accessoires de salle, récupération, cuisine',chev:true}))}
+    ${sec('',shareCell()+(MONEY.support.url?`<a class="cell hasico" href="${MONEY.support.url}" target="_blank" rel="noopener"><span class="cico" style="background:var(--pink)">❤️</span><span class="cbody"><span class="ct">Offrir un café au développeur</span><span class="cs">Don ponctuel via ${esc(MONEY.support.label)}, sans abonnement</span></span>${CH}</a>`:''),'L’appli reste 100 % gratuite. Les partages et les dons l’aident à le rester.')}
+    ${sec('',(isStandalone()?'':cell({a:'installGuide',icon:ic('down'),bg:'var(--blue)',title:'Installer sur l’écran d’accueil',chev:true}))
+     +cell({a:'dataSheet',icon:ic('checklist'),bg:'var(--green)',title:'Mes données',sub:'Sauvegarder, restaurer ou tout effacer',chev:true})
+     +cell({a:'legal',icon:ic('info'),bg:'var(--gray)',title:'Mentions légales et confidentialité',chev:true}))}
+    <div class="sec-f center" style="padding:8px 20px 4px">© ${new Date().getFullYear()} Coach Muscu · Tous droits réservés</div>
     <input type="file" id="importFile" accept="application/json,.json" style="display:none">
     <div class="sec-f center" style="margin-bottom:20px">Coach Muscu · ${p.place==='home'?'Édition maison':'Édition '+esc((CHAINS[gymOf().chain]||CHAINS.autre).n).replace(/^Autre enseigne$/,'salle')}</div>`);
+}
+function editProfileSheet(){
+  F={place:'gym',hmax:20,kbmax:16,...S.profile,prio:[...(S.profile.prio||[])],equip:[...(S.profile.equip||[])],focus:[...(S.profile.focus||[])],_sheet:true};
+  openSheet(`<div class="pad"><div class="t2">Mon profil</div><div class="sub">Ton programme est mis à jour à l’enregistrement. Ton historique et tes charges sont conservés.</div></div>
+   ${profileForm(true)}
+   <div class="btnwrap"><button class="btn" data-a="saveProfile">${S.program&&S.program.custom?'Enregistrer':'Enregistrer et régénérer'}</button></div>`,{title:'Profil'});
+}
+function settingsSheet(){
+  openSheet(`<div class="pad"><div class="t2">Réglages</div></div>
+   ${sec('Séance',
+      cell({icon:ic('speaker'),bg:'var(--red)',title:'Signal sonore',sub:'Bips 3-2-1 à la fin du repos',right:`<button class="sw ${S.settings.sound?'on':''}" data-a="toggleSet" data-k="sound" aria-label="Son"></button>`})
+     +cell({icon:ic('wave'),bg:'var(--orange)',title:'Vibrations',sub:'Retours haptiques (iOS 18+) et vibrations Android',right:`<button class="sw ${S.settings.vibe?'on':''}" data-a="toggleSet" data-k="vibe" aria-label="Vibrations"></button>`})
+     +cell({a:'testSound',icon:ic('play',1),bg:'var(--blue)',title:'Tester le son',chev:true}),
+     'Sur iOS 17 et plus, le son est joué même en mode silencieux. Monte le volume avant ta séance.')}
+   ${sec('Nutrition',cell({icon:ic('fork',1),bg:'var(--green)',title:'Mode OMAD',sub:'Un repas par jour : réglages dans l’onglet Nutrition',right:`<button class="sw ${NUT().omad?'on':''}" data-a="omadToggle" aria-label="Mode OMAD"></button>`}))}
+   ${STATS.code?sec('Confidentialité',cell({icon:ic('wave'),bg:'var(--teal)',title:'Statistiques anonymes',sub:'Aide à savoir combien de personnes utilisent l’appli. Aucune donnée personnelle.',right:`<button class="sw ${S.settings.noStats?'':'on'}" data-a="statsToggle" aria-label="Statistiques anonymes"></button>`})):''}`,{title:'Réglages'});
+}
+function gearSheet(){
+  const p=S.profile;
+  openSheet(`<div class="pad"><div class="t2">Mon matériel</div><div class="sub">Le matériel utile selon ton programme. ${MONEY.amazonTag?'Liens affiliés : Coach Muscu touche une petite commission, sans surcoût pour toi.':''}</div></div>
+    ${p.place==='home'?eqShopSec(p)+sec('Pour s’entraîner chez soi',gearLink('tapis','Pour le gainage, les abdos et les étirements')+gearLink('corde','Échauffement et cardio en 10 minutes')):''}
+    ${sec('Accessoires de salle',gearLink('sangles','Pour garder la prise sur les tirages lourds')+gearLink('ceinture','Pour les squats et soulevés lourds')+gearLink('gants','Pour protéger tes mains')+gearLink('genouilleres','Pour garder les genoux au chaud sur les squats')+gearLink('gourde'))}
+    ${sec('Récupération',gearLink('rouleau','5 min sur les muscles travaillés')+gearLink('pistolet','Pour détendre les muscles après la séance'))}
+    ${sec('Cuisine',gearLink('balance','Pèse tes aliments : ton compteur de calories devient précis')+gearLink('shaker','Pour tes shakers de whey'),shopNote())}`,{title:'Matériel'});
+}
+function dataSheet(){
+  openSheet(`<div class="pad"><div class="t2">Mes données</div><div class="sub">Tes données restent uniquement sur ce téléphone. Fais une sauvegarde avant de changer de téléphone.</div></div>
+   ${sec('',cell({a:'export',icon:ic('share'),bg:'var(--blue)',title:'Exporter une sauvegarde',chev:true})
+     +cell({a:'import',icon:ic('down'),bg:'var(--green)',title:'Importer une sauvegarde',chev:true}))}
+   ${sec('',cell({a:'reset',icon:ic('trash'),bg:'var(--red)',title:'<span style="color:var(--red)">Tout réinitialiser</span>'}),'Efface ton profil, ton programme, ton historique, ton journal et tes photos.')}`,{title:'Données'});
 }
 
 /* ---------- Mode séance ---------- */
@@ -2313,14 +2350,13 @@ function dayPlan(){
   const sum={kcal:0,p:0,c:0,f:0}; items.forEach(o=>{const m=rxMac(o.r,best.k);for(const x in sum)sum[x]+=m[x]});
   _plan={key,items,k:best.k,sum,M}; return _plan;
 }
+let nutTab='journal';
 function vNutrition(){
-  const p=S.profile, M=macros(p), per=Math.round(M.refW*.4), P=dayPlan();
-  const omad=NUT().omad;
-  return page('Nutrition',{sub:`${GOALS[p.goal].n} · ${omad?'mode OMAD, un repas par jour':'objectifs quotidiens'}`},
-  `${sec('',cell({icon:ic('clock',1),bg:omad?'var(--tint)':'var(--gray)',title:'Mode OMAD',sub:'Un seul repas par jour (jeûne intermittent)',right:`<button class="sw ${omad?'on':''}" data-a="omadToggle" aria-label="Mode OMAD"></button>`}))}
-   <div class="sec-h big" style="padding:4px 20px 10px">Compteur de calories</div>
-   ${vJournal()}
-   <div class="sec-h big" style="padding:4px 20px 10px">Tes objectifs</div>
+  const p=S.profile, M=macros(p), per=Math.round(M.refW*.4), omad=NUT().omad;
+  const tabs=`<div class="segwrap" style="margin-bottom:18px">${seg('nt',[['journal','Journal'],['obj','Objectifs'],['rx','Recettes']],nutTab,'nutTab')}</div>`;
+  let body='';
+  if(nutTab==='obj'){ const P=dayPlan();
+    body=`${sec('',cell({icon:ic('clock',1),bg:omad?'var(--tint)':'var(--gray)',title:'Mode OMAD',sub:'Un seul repas par jour (jeûne intermittent)',right:`<button class="sw ${omad?'on':''}" data-a="omadToggle" aria-label="Mode OMAD"></button>`}))}
    <div class="card">
      <div class="cap">Objectif du jour</div>
      <div class="bignum">${M.kcal.toLocaleString('fr-FR')}<small>kcal</small></div>
@@ -2337,12 +2373,14 @@ function vNutrition(){
      'Le total quotidien de protéines reste le facteur principal ; le timing affine les résultats (ISSN, 2017).',true)}
    ${sec('Exemple de journée',P.items.map(o=>{const m=rxMac(o.r,P.k);return cell({a:'rx',attrs:`data-id="${o.r.id}" data-k="${P.k}"`,icon:`<span class="emo">${o.r.em}</span>`,bg:'var(--bg3)',title:esc(o.r.n),sub:`${o.lbl} · ${r0(m.kcal)} kcal · ${r0(m.p)} g de protéines`,chev:true})}).join(''),
      `Combinaison choisie automatiquement pour coller à tes objectifs (portions ×${fmtNum(P.k)}) : ${r0(P.sum.kcal).toLocaleString('fr-FR')} kcal · ${r0(P.sum.p)} g de protéines · ${r0(P.sum.c)} g de glucides · ${r0(P.sum.f)} g de lipides. Touche une recette pour voir les quantités ajustées.`,true)}`}
-   <div class="sec-h big" style="padding:4px 20px 10px">Idées recettes</div>
-   <div class="segwrap" style="margin-bottom:14px">${seg('rxCat',RX_CATS,rxCat,'rxCat')}</div>
+   ${sec('',cell({a:'nutriSrc',icon:ic('book'),bg:'var(--indigo)',title:'Sources et méthode',sub:'ISSN, Schoenfeld & Aragon, Ciqual (ANSES), USDA',chev:true}))}`; }
+  else if(nutTab==='rx'){
+    body=`<div class="segwrap" style="margin-bottom:14px">${seg('rxCat',RX_CATS,rxCat,'rxCat')}</div>
    <div id="rxList">${vRxList()}</div>
    ${sec('Compléments & accessoires',cell({a:'crea',icon:'<span class="emo">💊</span>',bg:'var(--bg3)',title:'Créatine monohydrate',sub:'Le complément le plus étudié : à quoi elle sert, combien en prendre',chev:true})
-     +gearLink('balance','Pèse tes aliments : ton compteur de calories devient précis')+gearLink('shaker','Pour tes shakers de whey'),shopNote())}
-   ${sec('',cell({a:'nutriSrc',icon:ic('book'),bg:'var(--indigo)',title:'Sources et méthode',sub:'ISSN, Schoenfeld & Aragon, Ciqual (ANSES), USDA',chev:true}))}`);
+     +gearLink('whey','Pratique pour atteindre tes protéines')+gearLink('balance','Pèse tes aliments : ton compteur de calories devient précis')+gearLink('shaker','Pour tes shakers de whey'),shopNote())}`; }
+  else body=vJournal();
+  return page('Nutrition',{sub:`${GOALS[p.goal].n} · ${omad?'mode OMAD, un repas par jour':'objectifs quotidiens'}`},tabs+body);
 }
 function vRxList(){
   const g=S.profile.goal;
@@ -3025,7 +3063,7 @@ document.addEventListener('click',ev=>{
       break; }
     case 'progDay': { progDay=+el.dataset.val; segUpdate(el); haptic(); const dv=$('#dayView'); dv.innerHTML=vDay(progDay); dv.classList.remove('fadein'); void dv.offsetWidth; dv.classList.add('fadein'); refreshAnims(); break; }
     case 'saveProfile': {
-      readForm();
+      readForm(); const inSh=!!(F&&F._sheet);
       const age=+F.age, w=+String(F.weight).replace(',','.'), h=+F.height;
       if(!(age>=14&&age<=90)) return toastErr('Indique un âge entre 14 et 90 ans');
       if(!(w>=35&&w<=250)) return toastErr('Indique un poids valide');
@@ -3034,11 +3072,11 @@ document.addEventListener('click',ev=>{
       const daysChanged=!S.profile||S.profile.days!==+F.days, nsplit=splitOf({days:+F.days,split:F.split}), splitChanged=!S.profile||splitOf(S.profile)!==nsplit||(focusOf(S.profile)||[]).join()!==(focusOf(F)||[]).join();
       S.profile={split:nsplit,sex:F.sex,age,weight:w,height:h,level:F.level,goal:F.goal,days:+F.days,prio:(F.prio||[]).slice(0,3),place:F.place||'gym',equip:[...(F.equip||[])],hmax:+F.hmax||20,kbmax:+F.kbmax||16,chain:F.chain||'onair',noMach:[...(F.noMach||[])],focus:[...(focusOf(F)||[])]};
       const fin=()=>{ S.program=generate(S.profile); if(daysChanged||splitChanged) S.cycle={done:[],skipped:[]}; progDay=null; EDIT=null; F=null; save();
-        if(first) track('profil-cree','Profil créé'); toast(first?'Programme généré':'Programme mis à jour'); go(first?'home':'program','fade') };
+        if(first) track('profil-cree','Profil créé'); toast(first?'Programme généré':'Programme mis à jour'); go(first?'home':'program','fade'); if(inSh) closeSheet() };
       if(S.program&&S.program.custom){
         if(daysChanged||splitChanged) actionSheet({title:'Remplacer ton programme personnalisé ?',msg:`Le programme « ${esc(progName({days:+F.days,split:nsplit,focus:focusOf(F)||[]}))} » va générer un nouveau programme. Tes séances modifiées seront remplacées (ton historique est conservé).`,
-          actions:[{label:'Générer le nouveau programme',style:'destructive',fn:fin},{label:'Garder mon programme perso',fn:()=>{F=null;save();toast('Profil enregistré · programme perso conservé');go('program','fade')}}]});
-        else { F=null; save(); toast('Profil enregistré · programme perso conservé'); go('program','fade') }
+          actions:[{label:'Générer le nouveau programme',style:'destructive',fn:fin},{label:'Garder mon programme perso',fn:()=>{F=null;save();toast('Profil enregistré · programme perso conservé');go('program','fade');if(inSh) closeSheet()}}]});
+        else { F=null; save(); toast('Profil enregistré · programme perso conservé'); go('program','fade'); if(inSh) closeSheet() }
         break; }
       fin(); break; }
     case 'start': unlockAudio(); startDay(+el.dataset.d); break;
@@ -3108,11 +3146,18 @@ document.addEventListener('click',ev=>{
     case 'skipDay': { const i=+el.dataset.d; ensureCycle(); S.cycle.done.push(i); S.cycle.skipped.push(i); ensureCycle(); progDay=null; save(); closeSheet(); render(); toast('Séance sautée · planning réajusté','forward'); break; }
     case 'rappel': unlockAudio(); startDay(-1,buildRappel(el.dataset.g)); break;
     case 'rxCat': { rxCat=el.dataset.val; segUpdate(el); haptic(); const l=$('#rxList'); l.innerHTML=vRxList(); l.classList.remove('fadein'); void l.offsetWidth; l.classList.add('fadein'); break; }
-    case 'rxCatGo': { rxCat=el.dataset.c; render(); const sw=document.querySelector('[data-a="rxCat"]'); if(sw) sw.closest('.segwrap').scrollIntoView({behavior:'smooth',block:'start'}); break; }
+    case 'rxCatGo': { rxCat=el.dataset.c; nutTab='rx'; render(); window.scrollTo({top:0,behavior:'smooth'}); break; }
     case 'rx': rxSheet(el.dataset.id, el.dataset.k?+el.dataset.k:1); break;
     case 'rxK': { rxK=Math.min(3,Math.max(.5,Math.round((rxK+(+el.dataset.d)*.25)*4)/4)); const b=$('#rxBody'); if(b) b.innerHTML=rxBody(); haptic(); break; }
     case 'nutriSrc': nutriSrcSheet(); break;
     case 'legal': legalSheet(); break;
+    case 'editProfile': editProfileSheet(); break;
+    case 'settings': settingsSheet(); break;
+    case 'gear': gearSheet(); break;
+    case 'restSheet': restInfoSheet(); break;
+    case 'dataSheet': dataSheet(); break;
+    case 'nutTab': { nutTab=el.dataset.val; segUpdate(el); haptic(); setTimeout(()=>{render();window.scrollTo(0,0)},180); break; }
+    case 'goJournal': nutTab='journal'; haptic(); go('nutrition'); window.scrollTo(0,0); break;
     case 'share': track('partage-appli','Partage de l’appli'); shareApp(); break;
     case 'sharePR': prShareSheet(); break;
     case 'prShareGo': track('partage-record-image','Partage d’un record (image)'); prShareGo(); break;
