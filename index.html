@@ -400,6 +400,17 @@ svg.fig .pd{fill:#48484a}
 .mrow .mv{font-size:12px;color:var(--label2);text-align:right;font-variant-numeric:tabular-nums}.mrow .mv b{color:var(--label);font-weight:600}
 .mhead{display:flex;justify-content:space-between;padding:12px 16px 4px;font-size:13px;font-weight:600;color:var(--label2);text-transform:uppercase;letter-spacing:-.003em}
 .mhead+.cell::before{display:none}
+.meal{margin-bottom:26px}
+.meal .sec-h{display:flex;justify-content:space-between;gap:12px}
+.meal .sec-h span:last-child{text-transform:none;font-variant-numeric:tabular-nums}
+.meal .cell{padding-top:10px;padding-bottom:10px}
+.meal .cs{font-variant-numeric:tabular-nums}
+.cv.kc{font-variant-numeric:tabular-nums;color:var(--label)}
+.cv.kc small{font-size:13px;color:var(--label2)}
+.addrow{color:var(--tint);font-size:17px;gap:12px;min-height:44px}
+.addrow .pl{width:22px;height:22px;border-radius:50%;background:var(--tint);color:#000;display:grid;place-items:center;flex:none}
+.addrow .pl svg{width:13px;height:13px;stroke-width:3}
+.addrow:active{background:var(--fill4)}
 .srch{display:flex;align-items:center;gap:8px;margin:0 16px 14px;padding:0 6px 0 10px;background:var(--fill3);border-radius:10px;height:38px;color:var(--label2)}
 .srch input{flex:1;background:none;border:0;outline:0;font-size:17px;color:var(--label);min-width:0;-webkit-appearance:none;appearance:none}
 .srch input::placeholder{color:var(--label3)}
@@ -2757,9 +2768,10 @@ function weekChart(target){
 function vJournal(){
   const k=curDay(), T=logTot(k), M=macros(S.profile), rem=M.kcal-T.kcal, entries=logOf(k), ML=mealsList(), keys=ML.map(m=>m[0]);
   const C=2*Math.PI*44, pct=Math.min(1,T.kcal/M.kcal);
-  const groups=ML.map(([mk,lbl,em])=>{const es=entries.filter(e=>e.meal===mk), tk=es.reduce((a,e)=>a+e.kcal,0);
-    return `<div class="mhead"><span>${em} ${lbl}</span><span>${tk?r1(tk)+' kcal':''}</span></div>${es.map(e=>swp(cell({a:'logItem',attrs:`data-id="${e.id}"`,title:`<span class="ct sm">${esc(e.name)}</span>`,sub:`${esc(e.qty||'')}${e.qty?' · ':''}P ${r1(e.p)} · G ${r1(e.c)} · L ${r1(e.f)}`,value:r1(e.kcal)+' kcal'}),'log',e.id)).join('')}
-      ${cell({a:'logAdd',attrs:`data-m="${mk}"`,icon:ic('plus'),bg:'var(--tint);color:#000',title:'<span class="tint">Ajouter</span>'})}`}).join('');
+  const row=e=>swp(cell({a:'logItem',attrs:`data-id="${e.id}"`,title:esc(e.name),sub:`${e.qty?esc(e.qty)+' · ':''}<span class="mP">P</span> ${r1(e.p)} · <span class="mG">G</span> ${r1(e.c)} · <span class="mL">L</span> ${r1(e.f)}`,value:`${r1(e.kcal).toLocaleString('fr-FR')}<small> kcal</small>`,vcls:'kc'}),'log',e.id);
+  const meal=(mk,lbl,em,es)=>{const tk=es.reduce((a,e)=>a+e.kcal,0);
+    return `<section class="sec meal"><div class="sec-h"><span>${em}&nbsp; ${lbl}</span><span>${tk?r1(tk).toLocaleString('fr-FR')+' kcal':''}</span></div><div class="grp">${es.map(row).join('')}${mk?`<button class="cell addrow" data-a="logAdd" data-m="${mk}"><span class="pl">${ic('plus')}</span><span>Ajouter un aliment</span></button>`:''}</div></section>`};
+  const groups=ML.map(([mk,lbl,em])=>meal(mk,lbl,em,entries.filter(e=>e.meal===mk))).join('');
   const other=entries.filter(e=>!keys.includes(e.meal));
   return `<div class="card jcard">
      <div class="jnav"><button class="tbtn" data-a="logDay" data-d="-1" aria-label="Jour précédent">${ic('chevL')}</button><b>${dayLabel(k)}</b><button class="tbtn" data-a="logDay" data-d="1" ${k===todayK()?'disabled style="opacity:.25"':''} aria-label="Jour suivant">${ic('chev')}</button></div>
@@ -2770,8 +2782,8 @@ function vJournal(){
      </div>
      ${macroRow('Protéines',T.p,M.prot,'var(--P)')}${macroRow('Glucides',T.c,M.carb,'var(--G)')}${macroRow('Lipides',T.f,M.fat,'var(--L)')}
    </div>
-   <section class="sec"><div class="grp">${groups}${other.length?`<div class="mhead"><span>Autres</span></div>${other.map(e=>swp(cell({a:'logItem',attrs:`data-id="${e.id}"`,title:esc(e.name),value:r1(e.kcal)+' kcal'}),'log',e.id)).join('')}`:''}</div>
-     <div class="sec-f">Glisse un aliment vers la gauche pour le supprimer, ou touche-le pour l’ajouter à nouveau.</div></section>
+   ${groups}${other.length?meal(null,'Autres','🍴',other):''}
+   <div class="sec-f" style="margin:-22px 16px 32px">Glisse un aliment vers la gauche pour le supprimer, ou touche-le pour l’ajouter à nouveau.</div>
    ${k===todayK()&&!NUT().omad&&new Date().getHours()>=17&&T.kcal>0&&T.p<M.prot*.75?sec('',cell({icon:ic('bolt'),bg:'var(--pink)',title:`Il te manque ${r0(M.prot-T.p)} g de protéines aujourd’hui`,sub:'Idées rapides : skyr, fromage blanc, thon, œufs ou un shaker de whey'})+gearLink('barres','Pratiques à glisser dans le sac de sport')+gearLink('whey','Environ 20 g de protéines par dose'),shopNote()):''}
    ${sec('7 derniers jours',`<div class="cell" style="display:block">${weekChart(M.kcal)}<div class="cs center">Pointillés : ton objectif de ${M.kcal.toLocaleString('fr-FR')} kcal</div></div>`,null,true)}`;
 }
