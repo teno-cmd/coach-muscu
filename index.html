@@ -2521,7 +2521,7 @@ function legalSheet(){
    ${sec('Santé',
       T('Conseils généraux','Les programmes, charges et repères nutritionnels sont donnés à titre informatif. Ils ne remplacent pas l’avis d’un médecin, d’un kiné ou d’un diététicien.')
      +T('Écoute ton corps','Demande un avis médical avant de commencer en cas de problème de santé, de blessure, de grossesse ou de traitement. Arrête un exercice en cas de douleur.'))}
-   ${sec('Propriété intellectuelle',T('© '+new Date().getFullYear()+' Coach Muscu · Tous droits réservés','Le code, les textes et les visuels de l’appli ne peuvent être reproduits, modifiés ou redistribués sans autorisation écrite. Valeurs nutritionnelles : tables Ciqual (ANSES) et USDA ; données produits : Open Food Facts (licence ODbL).'))}`,{title:'Informations'});
+   ${sec('Propriété intellectuelle',T('© '+new Date().getFullYear()+' Coach Muscu · Tous droits réservés','Le code, les textes et les visuels de l’appli ne peuvent être reproduits, modifiés ou redistribués sans autorisation écrite. Valeurs nutritionnelles : table Ciqual 2025 (ANSES, Licence Ouverte) et USDA ; données produits : Open Food Facts (licence ODbL).'))}`,{title:'Informations'});
 }
 
 function rxSheet(id,k){rxId=id;rxK=k||1;openSheet(`<div id="rxBody">${rxBody()}</div>`,{title:'Recette'})}
@@ -2788,7 +2788,7 @@ function vJournal(){
    ${sec('7 derniers jours',`<div class="cell" style="display:block">${weekChart(M.kcal)}<div class="cs center">Pointillés : ton objectif de ${M.kcal.toLocaleString('fr-FR')} kcal</div></div>`,null,true)}`;
 }
 /* ----- Feuille d'ajout ----- */
-function logSheet(meal){ LG={meal:meal||defMeal(),tab:'food',q:'',sel:null,off:null,offErr:null,offLoading:false,offQ:''}; openSheet(`<div id="lgBody">${lgBody()}</div>`,{title:'Ajouter'}); setTimeout(()=>{const q=$('#fdQ');if(q)q.focus()},350) }
+function logSheet(meal){ loadCiq(); LG={meal:meal||defMeal(),tab:'food',q:'',sel:null,off:null,offErr:null,offLoading:false,offQ:''}; openSheet(`<div id="lgBody">${lgBody()}</div>`,{title:'Ajouter'}); setTimeout(()=>{const q=$('#fdQ');if(q)q.focus()},350) }
 function lgRefresh(){const b=$('#lgBody'); if(b) b.innerHTML=lgBody()}
 /* Récents et fréquents : un seul par aliment (dernière quantité), classés par fréquence et récence,
    avec un bonus pour ce qui est habituellement mangé au repas choisi. */
@@ -2805,6 +2805,31 @@ function recents(){
 const STARTERS=['oeuf','poulet','riz','pates_cuites','banane','pain_complet','skyr','whey','avoine','pomme'];
 const swp=(inner,kind,id)=>`<div class="swp" data-del="${kind}" data-id="${esc(id)}"><div class="swp-act"><button data-a="swDel">Supprimer</button></div><div class="swp-c">${inner}</div></div>`;
 const mpCell=(c,o,lbl)=>swp(cell({a:'fdPick',attrs:`data-k="mp_${c}"`,icon:ic('barcode'),bg:'var(--indigo)',title:`<span class="ct sm">${esc(o.n)}${lbl?' <span class="cs">(mon produit)</span>':''}</span>`,sub:`${r1(o.v[0])} kcal / 100 ${o.u||'g'} · P ${fmtNum(+(+o.v[1]).toFixed(1))} · G ${fmtNum(+(+o.v[2]).toFixed(1))} · L ${fmtNum(+(+o.v[3]).toFixed(1))}`,chev:true}),'prod',c);
+/* ----- Table Ciqual complète (≈ 3 400 aliments, ANSES, Licence Ouverte) -----
+   Chargée une seule fois en arrière-plan depuis aliments.json, puis gardée hors ligne par le service worker. */
+let CIQ=null, _ciqP=null;
+function loadCiq(){
+  if(CIQ||_ciqP) return _ciqP||Promise.resolve(CIQ);
+  _ciqP=fetch('aliments.json').then(r=>{if(!r.ok) throw 0; return r.json()}).then(j=>{
+    CIQ={}; j.f.forEach(([c,n,k,p,g,l,ml])=>{CIQ[c]={n,v:[k,p,g,l],u:ml?'ml':'g',_n:norm(n)}});
+    if(LG&&LG.q&&$('#fdList')) fdRefresh(); return CIQ;
+  }).catch(()=>{_ciqP=null; return null});
+  return _ciqP;
+}
+/* Recherche par début de mot (« oeuf » ne trouve pas « boeuf »), singulier ou pluriel */
+const foodToks=q=>norm(q).trim().split(/\s+/).map(t=>FOOD_ALIAS[t]||t).join(' ').split(/\s+/).filter(Boolean).map(t=>t.length>3?t.replace(/(s|x)$/,''):t);
+const foodHit=toks=>{const rs=toks.map(t=>new RegExp('(^|[^a-z0-9])'+t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))); return n=>{const x=norm(n); return rs.every(r=>r.test(x))}};
+/* Mots du quotidien → mots de la table Ciqual */
+const FOOD_ALIAS={coca:'cola',nutella:'tartiner',yogourt:'yaourt',yaourts:'yaourt',steack:'steak',steaks:'steak',patates:'pomme terre',patate:'pomme terre',frite:'frites',oeufs:'oeuf',ricard:'pastis',kebap:'kebab',hamburger:'burger',tacos:'tacos',chips:'chips',pates:'pates',spaghettis:'spaghetti',ketchup:'ketchup',mayo:'mayonnaise',vinaigrette:'vinaigrette',biere:'biere'};
+/* Classement : le nom qui commence par le mot cherché d'abord, puis les noms courts (aliments simples) */
+function ciqSearch(toks,max){
+  if(!CIQ) return [];
+  const t0=toks[0], res=[], ok=foodHit(toks);
+  for(const c in CIQ){ const f=CIQ[c], n=f._n; if(!ok(n)) continue;
+    let sc=0; if(n.startsWith(t0)) sc+=6; else if(new RegExp('(^|[ ,(])'+t0.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(n)) sc+=3;
+    if(/\b(cru|crue|nature|moyen)\b/.test(n)) sc+=1; sc-=n.length/30; res.push([c,f,sc]) }
+  return res.sort((a,b)=>b[2]-a[2]).slice(0,max);
+}
 function fdRefresh(){const l=$('#fdList'); if(l) l.innerHTML=fdList(); else lgRefresh()}
 function fdList(){
   const L=LG, q=norm(L.q).trim(), mine=Object.entries(S.myprod||{});
@@ -2816,15 +2841,19 @@ function fdList(){
       ${rc.length?sec('Récents et fréquents',rc.map((e,i)=>cell({a:'recentOpen',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(e.name)}</span>`,sub:`${esc(e.qty||'')}${e._n>1?` · ${e._n} fois`:''}`,value:r1(e.kcal)+' kcal',right:`<span class="radd" data-a="recentAdd" data-i="${i}" role="button" aria-label="Ajouter ${esc(e.name)} tel quel">${ic('plus')}</span>`})).join(''),'Touche + pour l’ajouter tel quel, ou la ligne pour changer la quantité.')
         :sec('Aliments courants',STARTERS.filter(k=>FOODS[k]).map(k=>{const f=FOODS[k];return cell({a:'fdPick',attrs:`data-k="${k}"`,title:`<span class="ct sm">${esc(f.n)}</span>`,sub:`${f.v[0]} kcal / 100 ${f.u||'g'}`,chev:true})}).join(''),'Tes aliments récents apparaîtront ici pour les ajouter en un appui.')}`;
   }
-  const toks=q.split(/\s+/), hit=n=>toks.every(t=>norm(n).includes(t));
-  const mp=mine.filter(([c,o])=>hit(o.n)), fd=Object.entries(FOODS).filter(([k,f])=>hit(f.n)).slice(0,30);
+  const toks=foodToks(q), hit=foodHit(toks);
+  const mp=mine.filter(([c,o])=>hit(o.n)), fd=Object.entries(FOODS).filter(([k,f])=>hit(f.n)).slice(0,15);
+  const seen=new Set(fd.map(([k,f])=>norm(f.n))), cq=ciqSearch(toks,40).filter(([c,f])=>!seen.has(f._n)).slice(0,40-fd.length);
+  if(!CIQ) loadCiq();
   let off;
   if(/^\d{8,14}$/.test(q)) off=sec('Produits du commerce',cell({a:'offSearch',icon:ic('barcode'),bg:'var(--blue)',title:`Chercher le code-barres ${esc(q)}`,chev:true}));
   else if(L.offLoading) off=sec('Produits du commerce',cell({icon:ic('clock',1),bg:'var(--gray)',title:'Recherche en cours…',sub:'Open Food Facts'}));
   else if(L.off&&L.offFor===q) off=L.off.length?sec('Produits du commerce',L.off.map((o,i)=>cell({a:'offPick',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(o.n)}${o.u==='ml'?' 🥤':''}</span>`,sub:`${r1(o.v[0])} kcal / 100 ${o.u} · P ${fmtNum(+o.v[1].toFixed(1))} · G ${fmtNum(+o.v[2].toFixed(1))} · L ${fmtNum(+o.v[3].toFixed(1))}`,chev:true})).join(''),'Valeurs des étiquettes (base collaborative Open Food Facts).'):sec('Produits du commerce',cell({title:'<span class="cs">Aucun produit trouvé pour cette recherche.</span>'}));
   else off=sec('Produits du commerce',cell({a:'offSearch',icon:ic('search'),bg:'var(--blue)',title:`<span class="ct sm">Rechercher « ${esc(L.q.trim())} » dans les produits du commerce</span>`,sub:'Marques et produits emballés · Open Food Facts',chev:true}));
   return `${err}${mp.length?sec('Mes produits',mp.map(([c,o])=>mpCell(c,o)).join('')):''}
-    ${fd.length?sec('Aliments',fd.map(([k,f])=>cell({a:'fdPick',attrs:`data-k="${k}"`,title:`<span class="ct sm">${esc(f.n)}</span>`,sub:`${f.v[0]} kcal / 100 ${f.u||'g'} · P ${f.v[1]} · G ${f.v[2]} · L ${f.v[3]}`,chev:true})).join('')):''}
+    ${fd.length||cq.length?sec('Aliments',fd.map(([k,f])=>cell({a:'fdPick',attrs:`data-k="${k}"`,title:`<span class="ct sm">${esc(f.n)}</span>`,sub:`${f.v[0]} kcal / 100 ${f.u||'g'} · P ${fmtNum(f.v[1])} · G ${fmtNum(f.v[2])} · L ${fmtNum(f.v[3])}`,chev:true})).join('')
+      +cq.map(([c,f])=>cell({a:'fdPick',attrs:`data-k="cq_${c}"`,title:`<span class="ct sm">${esc(f.n)}</span>`,sub:`${f.v[0]} kcal / 100 ${f.u} · P ${fmtNum(f.v[1])} · G ${fmtNum(f.v[2])} · L ${fmtNum(f.v[3])}`,chev:true})).join(''),
+      CIQ?'Valeurs moyennes de la table Ciqual 2025 (ANSES).':'Chargement de la base complète des aliments…'):(CIQ?'':sec('Aliments',cell({icon:ic('clock',1),bg:'var(--gray)',title:'Chargement de la base des aliments…'})))}
     ${off}`;
 }
 /* Aliments similaires (pour remplir un produit absent de la base) */
@@ -2832,7 +2861,7 @@ const STOPW=new Set(['de','du','des','la','le','les','au','aux','a','en','et','d
 const ftoks=s=>norm(s).replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(t=>t.length>1&&!STOPW.has(t)&&!/^\d+$/.test(t)).map(t=>t.replace(/(es|s|x)$/,''));
 function simFoods(name,n=6){
   const q=ftoks(name); if(!q.length) return [];
-  const pool=[...Object.entries(FOODS).map(([k,f])=>({k,f})),...Object.entries(S.myprod||{}).map(([c,o])=>({k:'mp_'+c,f:{n:o.n,v:o.v}}))];
+  const pool=[...Object.entries(FOODS).map(([k,f])=>({k,f})),...Object.entries(S.myprod||{}).map(([c,o])=>({k:'mp_'+c,f:{n:o.n,v:o.v}})),...Object.entries(CIQ||{}).map(([c,f])=>({k:'cq_'+c,f}))];
   return pool.map(o=>{const ft=ftoks(o.f.n); let sc=0; q.forEach((t,i)=>{const w=i===0?1.5:1; if(ft.includes(t)) sc+=2*w; else if(t.length>=4&&ft.some(x=>x.length>=4&&(x.startsWith(t.slice(0,4))||t.startsWith(x.slice(0,4))))) sc+=w}); return {...o,sc}})
     .filter(o=>o.sc>0).sort((a,b)=>b.sc-a.sc).slice(0,n);
 }
@@ -3215,13 +3244,13 @@ document.addEventListener('click',ev=>{
         else if(g>0&&/\b(g|ml)\b/.test(e.qty)) LG.sel={kind:'off',name:e.name,v:[e.kcal/g*100,e.p/g*100,e.c/g*100,e.f/g*100],unit:'g',qty:g};
         else { const {id,t,meal,_n,...c}=e; addLog({...c,meal:LG.meal}); render(); haptic(); toast(`+${r1(e.kcal)} kcal · ${e.name}`); lgRefresh(); break; } }
       lgRefresh(); $('#shScroll').scrollTop=0; break; }
-    case 'fdPick': { const k0=el.dataset.k, f=k0.startsWith('mp_')?S.myprod[k0.slice(3)]:FOODS[k0]; LG.sel=k0.startsWith('mp_')?selFromProd(f):{kind:'food',name:f.n,v:f.v,u:f.u,pc:f.pc,unit:f.pc?'pc':'g',qty:f.pc?1:(f.u==='ml'?250:100)}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
+    case 'fdPick': { const k0=el.dataset.k, f=k0.startsWith('mp_')?S.myprod[k0.slice(3)]:k0.startsWith('cq_')?(CIQ||{})[k0.slice(3)]:FOODS[k0]; if(!f) break; LG.sel=k0.startsWith('mp_')?selFromProd(f):{kind:'food',name:f.n,v:f.v,u:f.u,pc:f.pc||null,unit:f.pc?'pc':'g',qty:f.pc?1:(f.u==='ml'?250:100)}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'rxPick': { const r=rxOf(el.dataset.id); LG.sel={kind:'rx',key:r.id,name:r.n,k:1}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'offPick': { const o=LG.off[+el.dataset.i]; LG.sel=selFromProd(o); lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'offSearch': offSearch(); break;
     case 'scanOpen': openScanner(); break;
     case 'swDel': { const w=el.closest('.swp'); if(w) swDelete(w); break; }
-    case 'npFill': { const k=el.dataset.k, f=k.startsWith('mp_')?(S.myprod||{})[k.slice(3)]:FOODS[k]; if(!f) break; npSetVals(f.v,`Valeurs moyennes de « ${f.n} » (tables Ciqual / USDA). À ajuster si l’emballage indique autre chose.`); if(f.u==='ml'||f.u==='g') npUnit(f.u==='ml'?'ml':'g'); const nn=$('#npN'); if(nn&&!nn.value.trim()) nn.value=f.n; break; }
+    case 'npFill': { const k=el.dataset.k, f=k.startsWith('mp_')?(S.myprod||{})[k.slice(3)]:k.startsWith('cq_')?(CIQ||{})[k.slice(3)]:FOODS[k]; if(!f) break; npSetVals(f.v,`Valeurs moyennes de « ${f.n} » (tables Ciqual / USDA). À ajuster si l’emballage indique autre chose.`); if(f.u==='ml'||f.u==='g') npUnit(f.u==='ml'?'ml':'g'); const nn=$('#npN'); if(nn&&!nn.value.trim()) nn.value=f.n; break; }
     case 'npOnline': npOnline(); break;
     case 'npU': npUnit(el.dataset.val,true); haptic(); break;
     case 'nfCancel': LG.nfU=null; LG.nf=null; LG.offErr=null; lgRefresh(); break;
@@ -3405,6 +3434,7 @@ setupPWA();
 render();
 stat('/',isStandalone()?'Ouverture (appli installée)':'Ouverture (navigateur)'); if(isStandalone()) track('ouverture-appli-installee','Ouverture depuis l’écran d’accueil');
 maybeInstallGuide();
+setTimeout(()=>{ if(S.profile) loadCiq() },4000);
 setInterval(tick,250);
 requestAnimationFrame(animLoop);
 if(S.active) keepAwake();
