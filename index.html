@@ -886,6 +886,7 @@ function placeRows(o){
     <div class="cell"><span class="cico" style="background:var(--green)">${ic('checkCircle',1)}</span><span class="cbody"><span class="ct">Poids du corps</span><span class="cs">Toujours disponible</span></span></div>
     ${Object.entries(EQUIP).map(([k,q])=>cell({a:'eqF',attrs:`data-e="${k}"`,cls:'goal '+((o.equip||[]).includes(k)?'sel':''),icon:`<span class="emo">${q.em}</span>`,bg:'var(--bg3)',title:q.n,right:`<span class="ck">${ic('check')}</span>`})).join('')}
     ${(o.equip||[]).includes('halt')?`<div class="cell"><span class="cbody"><span class="ct">Haltère le plus lourd</span><span class="cs">Par haltère, pour plafonner les charges</span></span><div class="stp" style="width:132px;flex:none"><button data-a="eqMax" data-k="hmax" data-d="-1" aria-label="Moins">${ic('minus')}</button><span>${o.hmax||20}<small>kg</small></span><button data-a="eqMax" data-k="hmax" data-d="1" aria-label="Plus">${ic('plus')}</button></div></div>`:''}
+    ${Object.keys(SHOP_EQ).some(k=>!(o.equip||[]).includes(k))?cell({a:'eqShop',icon:ic('plus'),bg:'var(--blue)',title:'Il te manque du matériel ?',sub:'Les essentiels pour t’équiper à la maison',chev:true}):''}
     ${(o.equip||[]).includes('kettlebell')?`<div class="cell"><span class="cbody"><span class="ct">Kettlebell la plus lourde</span></span><div class="stp" style="width:132px;flex:none"><button data-a="eqMax" data-k="kbmax" data-d="-1" aria-label="Moins">${ic('minus')}</button><span>${o.kbmax||16}<small>kg</small></span><button data-a="eqMax" data-k="kbmax" data-d="1" aria-label="Plus">${ic('plus')}</button></div></div>`:''}
    </div>
    <div id="gymEq" style="display:${home?'none':'block'}">${cell({a:'gymOpen',icon:ic('target'),bg:'var(--indigo)',title:'Ma salle et ses machines',value:esc((CHAINS[o.chain||'onair']||CHAINS.autre).n),sub:(o.noMach||[]).length?(o.noMach.length+' machine(s) indisponible(s)'):'Enseigne, machines, photos',chev:true})}</div>`;
@@ -894,7 +895,7 @@ function placeSheet(){
   F={...S.profile,prio:[...(S.profile.prio||[])],equip:[...(S.profile.equip||[])],_sheet:true};
   openSheet(`<div class="pad"><div class="t2">Lieu d’entraînement</div><div class="sub">À la maison, chaque exercice de salle est remplacé par l’alternative la plus proche avec ton matériel, en gardant les mêmes muscles.</div></div>
    <div id="placeBody">${sec('',placeRows(F),'Ton historique, tes charges et ton planning sont conservés.')}</div>
-   <div class="btnwrap"><button class="btn" data-a="placeSave">Appliquer au programme</button></div>`,{title:'Lieu'});
+   <div class="btnwrap"><button class="btn" data-a="placeSave">Appliquer au programme</button></div><div id="eqShopBox"></div>`,{title:'Lieu'});
 }
 function refreshPlaceUI(){
   const pb=$('#placeBody'); if(pb){ pb.innerHTML=sec('',placeRows(F),'Ton historique, tes charges et ton planning sont conservés.'); return }
@@ -1805,8 +1806,10 @@ function vProfile(){
      +cell({a:'testSound',icon:ic('play',1),bg:'var(--blue)',title:'Tester le son',chev:true})
      +cell({icon:ic('fork',1),bg:'var(--green)',title:'Mode OMAD',sub:'Un repas par jour : réglages dans l’onglet Nutrition',right:`<button class="sw ${NUT().omad?'on':''}" data-a="omadToggle" aria-label="Mode OMAD"></button>`}),
      'Sur iOS 17 et plus, le son est joué même en mode silencieux. Monte le volume avant ta séance.')}
-    ${p.place==='home'?eqShopSec():''}
-    ${sec('Accessoires de salle',gearLink('sangles','Pour garder la prise sur les tirages lourds')+gearLink('ceinture','Pour les squats et soulevés lourds')+gearLink('gourde'),shopNote())}
+    ${p.place==='home'?eqShopSec(p)+sec('Pour s’entraîner chez soi',gearLink('tapis','Pour le gainage, les abdos et les étirements')+gearLink('corde','Échauffement et cardio en 10 minutes'),shopNote()):''}
+    ${sec('Accessoires de salle',gearLink('sangles','Pour garder la prise sur les tirages lourds')+gearLink('ceinture','Pour les squats et soulevés lourds')+gearLink('gants','Pour protéger tes mains')+gearLink('genouilleres','Pour garder les genoux au chaud sur les squats')+gearLink('gourde'),shopNote())}
+    ${sec('Récupération',gearLink('rouleau','5 min sur les muscles travaillés')+gearLink('pistolet','Pour détendre les muscles après la séance'),shopNote())}
+    ${sec('Faire connaître l’appli',shareCell(),'Plus Coach Muscu a d’utilisateurs, plus elle peut rester gratuite.')}
     ${supportSec()}
     ${isStandalone()?'':sec('Application',cell({a:'installGuide',icon:ic('down'),bg:'var(--blue)',title:'Installer sur l’écran d’accueil',chev:true}))}
     ${sec('Données',
@@ -1923,7 +1926,9 @@ function finish(){
   openSheet(`<div class="pad center"><div class="hero-ic">${ic('trophy')}</div><h2 class="lt" style="font-size:28px;line-height:34px">Bien joué !</h2><div class="sub">${esc(entry.n)} terminée</div></div>
    <div class="sec"><div class="grp stats4 c3"><div><b>${Math.max(1,Math.round(entry.dur/60000))} min</b><span>Durée</span></div><div><b>${entry.sets}</b><span>Séries</span></div><div><b>${fmtVol(entry.vol)}</b><span>Volume</span></div></div></div>
    ${prs.length?sec('Nouveaux records',prs.map(p=>cell({icon:ic('trophy'),bg:'var(--orange)',title:esc(p)})).join('')):''}
-   ${supportCard(prs)}
+   ${(()=>{const sc=supportCard(prs); if(sc) return sc;
+      if(prs.length) return sec('',shareCell('Fais découvrir l’appli à ton partenaire de salle'));
+      return S.history.length%3===0?recoverySec():''})()}
    ${sec('',cell({icon:ic('sparkles'),bg:'var(--indigo)',title:'Progression automatique',sub:'Quand toutes tes séries atteignent le haut de la fourchette, la charge augmente à la séance suivante.'}))}
    <div class="btnwrap"><button class="btn" data-a="closeSheet">Terminé</button></div>`,{title:'Résumé'});
 }
@@ -1978,6 +1983,7 @@ function exInfo(id,di){
    ${px?`<div class="sec"><div class="grp stats4"><div><b>${nS}</b><span>Séries</span></div><div><b>${px.rmin}–${px.rmax}</b><span>Reps</span></div><div><b>${noLoad(id)?unitTxt(id):fmtNum(suggest(id).w)}</b><span>${noLoad(id)?'Charge':'kg'}</span></div><div><b>${restLbl(px.rest)}</b><span>Repos</span></div></div></div>`:''}
    ${(()=>{const mn=muscleNames(id);return `<section class="sec"><div class="sec-h">Muscles ciblés</div><div class="grp"><div class="abox">${exAnatomy(id,{lbl:1})}</div><div class="cell"><span class="cbody"><span>${mn.p.map(n=>`<span class="mtag">${n}</span>`).join('')}${mn.s.map(n=>`<span class="mtag s">${n}</span>`).join('')}</span><span class="cs">Vert plein : muscles principaux · vert clair : muscles secondaires</span></span></div></div></section>`})()}
    ${curPlace()!=='home'?machSection(id):''}
+   ${exGearSec(id)}
    ${sec('Posture parfaite',X.c.map(c=>`<div class="cell top" style="--inset:52px"><span class="mk g">${ic('checkCircle',1)}</span><span class="cbody"><span class="ct sm">${esc(c)}</span></span></div>`).join(''))}
    ${sec('Erreurs à éviter',X.e.map(c=>`<div class="cell top" style="--inset:52px"><span class="mk r">${ic('xcircle')}</span><span class="cbody"><span class="ct sm">${esc(c)}</span></span></div>`).join(''))}
    <div class="btnwrap"><a class="btn gray" href="${yt}" target="_blank" rel="noopener">${ic('play',1)} Voir des démos vidéo</a>${di!=null?`<button class="btn" data-a="start" data-d="${di}">Commencer ${esc(S.program.days[di].n)}</button>`:''}</div>`,{title:'Technique'});
@@ -2331,7 +2337,27 @@ function vRxList(){
 const SHOP_ING={whey:'whey protéine',caseine:'caséine micellaire',bcac:'beurre de cacahuète 100 %',avoine:'flocons d’avoine',galette_riz:'galettes de riz soufflé'};
 const SHOP_EQ={halt:'haltères réglables',kettlebell:'kettlebell',elastique:'élastiques de résistance musculation',traction:'barre de traction porte',banc:'banc de musculation inclinable',barre:'barre et disques musculation'};
 const SHOP_GEAR={creatine:['💊','Créatine monohydrate','créatine monohydrate creapure'],balance:['⚖️','Balance de cuisine','balance de cuisine précise 1 g'],shaker:['🥤','Shaker','shaker protéine'],
- sangles:['🪢','Sangles de tirage','sangles de tirage musculation'],ceinture:['🏋️','Ceinture de force','ceinture de force musculation'],gourde:['💧','Gourde 1 L','gourde sport 1 litre']};
+ sangles:['🪢','Sangles de tirage','sangles de tirage musculation'],ceinture:['🏋️','Ceinture de force','ceinture de force musculation'],gourde:['💧','Gourde 1 L','gourde sport 1 litre'],
+ gants:['🧤','Gants de musculation','gants de musculation'],magnesie:['🤍','Magnésie','magnésie musculation'],genouilleres:['🦵','Genouillères de squat','genouillères squat néoprène 7mm'],
+ chaussures:['👟','Chaussures d’haltérophilie','chaussures haltérophilie'],corde:['➰','Corde à sauter','corde à sauter fitness'],tapis:['🧘','Tapis de sol','tapis de sol fitness épais'],
+ rouleau:['🧻','Rouleau de massage','rouleau de massage foam roller'],pistolet:['🔫','Pistolet de massage','pistolet de massage musculaire'],
+ barres:['🍫','Barres protéinées','barres protéinées'],whey:['🥛','Whey protéine','whey protéine']};
+const APP_URL='https://teno-cmd.github.io/coach-muscu/';
+/* Partager l'appli : feuille de partage du téléphone, sinon copie du lien */
+async function shareApp(){
+  const d={title:'Coach Muscu',text:'Coach Muscu : programme de muscu personnalisé, séances guidées et compteur de calories. Gratuit, sans pub.',url:APP_URL};
+  try{ if(navigator.share){ await navigator.share(d); return } }catch(e){ if(e&&e.name==='AbortError') return }
+  try{ await navigator.clipboard.writeText(APP_URL); toast('Lien copié, colle-le à tes amis') }catch(e){ toast(APP_URL,'info') }
+}
+const shareCell=(sub)=>cell({a:'share',icon:ic('share'),bg:'var(--green)',title:'Partager Coach Muscu',sub:sub||'Envoie l’appli à un ami ou à ton partenaire de salle',chev:true});
+/* Matériel utile selon l'exercice (seulement pour les gros exercices polyarticulaires) */
+function exGearSec(id){
+  const X=EX[id]; if(X.t!=='H') return '';
+  const k=X.m==='dos'?['sangles','magnesie']:X.m==='quads'?['ceinture','genouilleres','chaussures']:['ischios','fessiers'].includes(X.m)?['ceinture','sangles']:['pecs','epaules','triceps'].includes(X.m)?['gants']:[];
+  return k.length?sec('Matériel utile',k.map(g=>gearLink(g)).join(''),shopNote()):'';
+}
+/* Récupération : proposée en fin de séance, une séance sur trois, quand aucun autre message n'est affiché */
+const recoverySec=()=>sec('Récupération',gearLink('rouleau','5 min sur les muscles travaillés, le soir ou le lendemain')+gearLink('pistolet','Pour détendre les muscles après une grosse séance'),shopNote());
 const gearLink=(k,sub)=>{const [em,n,q]=SHOP_GEAR[k];return shopLink(`${em} ${n}`,sub||'Voir sur Amazon',shopURL(q))};
 /* Message de soutien : seulement à la fin d'une séance, après un record ou un palier (10, 25, 50, 100… séances),
    au plus une fois par mois, et jamais si l'utilisateur a choisi « Ne plus afficher ». */
@@ -2357,7 +2383,8 @@ const shopLink=(title,sub,url)=>`<a class="cell" href="${url}" target="_blank" r
 const shopNote=()=>MONEY.amazonTag?'Liens affiliés : en tant que Partenaire Amazon, Coach Muscu réalise un bénéfice sur les achats remplissant les conditions requises, sans surcoût pour toi. Ça aide à garder l’appli gratuite.':'Liens de recherche vers des boutiques en ligne, à titre indicatif.';
 function rxShopSec(r){const ids=[...new Set(r.ing.map(([id])=>id))].filter(id=>SHOP_ING[id]);
   return ids.length?sec('Où l’acheter',ids.map(id=>shopLink(esc(ING[id].n),'Voir sur Amazon',shopURL(SHOP_ING[id]))).join(''),shopNote()):''}
-function eqShopSec(){return sec('Équiper ma salle à la maison',Object.entries(SHOP_EQ).map(([k,q])=>shopLink(`${EQUIP[k].em} ${esc(EQUIP[k].n)}`,'Voir sur Amazon',shopURL(q))
+function eqShopSec(p){const miss=Object.entries(SHOP_EQ).filter(([k])=>!((p&&p.equip)||[]).includes(k)); if(!miss.length) return '';
+  return sec(p&&(p.equip||[]).length?'Compléter mon matériel':'Équiper ma salle à la maison',miss.map(([k,q])=>shopLink(`${EQUIP[k].em} ${esc(EQUIP[k].n)}`,'Voir sur Amazon',shopURL(q))
   +`<a class="cell" href="${shopURL(q,'decathlon')}" target="_blank" rel="noopener" style="--inset:16px;min-height:36px;padding-top:4px"><span class="cbody"><span class="cs">Voir chez Decathlon</span></span>${CH}</a>`).join(''),shopNote())}
 const supportSec=()=>MONEY.support.url?sec('Soutenir Coach Muscu',`<a class="cell" href="${MONEY.support.url}" target="_blank" rel="noopener"><span class="cico" style="background:var(--pink)">❤️</span><span class="cbody"><span class="ct">Offrir un café au développeur</span><span class="cs">Don ponctuel via ${esc(MONEY.support.label)}, sans abonnement</span></span>${CH}</a>`,'L’appli reste 100 % gratuite. Les dons aident à payer son développement.'):'';
 
@@ -2648,6 +2675,7 @@ function vJournal(){
    </div>
    <section class="sec"><div class="grp">${groups}${other.length?`<div class="mhead"><span>Autres</span></div>${other.map(e=>swp(cell({a:'logItem',attrs:`data-id="${e.id}"`,title:esc(e.name),value:r1(e.kcal)+' kcal'}),'log',e.id)).join('')}`:''}</div>
      <div class="sec-f">Glisse un aliment vers la gauche pour le supprimer, ou touche-le pour l’ajouter à nouveau.</div></section>
+   ${k===todayK()&&!NUT().omad&&new Date().getHours()>=17&&T.kcal>0&&T.p<M.prot*.75?sec('',cell({icon:ic('bolt'),bg:'var(--pink)',title:`Il te manque ${r0(M.prot-T.p)} g de protéines aujourd’hui`,sub:'Idées rapides : skyr, fromage blanc, thon, œufs ou un shaker de whey'})+gearLink('barres','Pratiques à glisser dans le sac de sport')+gearLink('whey','Environ 20 g de protéines par dose'),shopNote()):''}
    ${sec('7 derniers jours',`<div class="cell" style="display:block">${weekChart(M.kcal)}<div class="cs center">Pointillés : ton objectif de ${M.kcal.toLocaleString('fr-FR')} kcal</div></div>`,null,true)}`;
 }
 /* ----- Feuille d'ajout ----- */
@@ -3025,6 +3053,11 @@ document.addEventListener('click',ev=>{
     case 'rxK': { rxK=Math.min(3,Math.max(.5,Math.round((rxK+(+el.dataset.d)*.25)*4)/4)); const b=$('#rxBody'); if(b) b.innerHTML=rxBody(); haptic(); break; }
     case 'nutriSrc': nutriSrcSheet(); break;
     case 'legal': legalSheet(); break;
+    case 'share': shareApp(); break;
+    case 'eqShop': { const sc=eqShopSec(F||S.profile); if(!sc) break; const box=$('#eqShopBox');
+      if(box){ box.innerHTML=sc; box.scrollIntoView({behavior:'smooth',block:'start'}) }
+      else openSheet(`<div class="pad"><div class="t2">Compléter mon matériel</div><div class="sub">Avec ces essentiels, ton programme maison propose plus d’exercices et des charges plus adaptées.</div></div>${sc}`,{title:'Matériel'});
+      break; }
     case 'logDay': { const n=shiftDay(curDay(),+el.dataset.d); LOGDAY=n>=todayK()?null:n; haptic(); render(); break; }
     case 'logAdd': logSheet(el.dataset.m); break;
     case 'logItem': { const k=curDay(), e=logOf(k).find(x=>x.id===el.dataset.id); if(!e) break;
