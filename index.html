@@ -2783,7 +2783,7 @@ function vJournal(){
      ${macroRow('Protéines',T.p,M.prot,'var(--P)')}${macroRow('Glucides',T.c,M.carb,'var(--G)')}${macroRow('Lipides',T.f,M.fat,'var(--L)')}
    </div>
    ${groups}${other.length?meal(null,'Autres','🍴',other):''}
-   <div class="sec-f" style="margin:-22px 16px 32px">Glisse un aliment vers la gauche pour le supprimer, ou touche-le pour l’ajouter à nouveau.</div>
+   <div class="sec-f" style="margin:-22px 16px 32px">Touche un aliment pour modifier sa quantité ou son repas. Glisse-le vers la gauche pour le supprimer.</div>
    ${k===todayK()&&!NUT().omad&&new Date().getHours()>=17&&T.kcal>0&&T.p<M.prot*.75?sec('',cell({icon:ic('bolt'),bg:'var(--pink)',title:`Il te manque ${r0(M.prot-T.p)} g de protéines aujourd’hui`,sub:'Idées rapides : skyr, fromage blanc, thon, œufs ou un shaker de whey'})+gearLink('barres','Pratiques à glisser dans le sac de sport')+gearLink('whey','Environ 20 g de protéines par dose'),shopNote()):''}
    ${sec('7 derniers jours',`<div class="cell" style="display:block">${weekChart(M.kcal)}<div class="cs center">Pointillés : ton objectif de ${M.kcal.toLocaleString('fr-FR')} kcal</div></div>`,null,true)}`;
 }
@@ -2868,30 +2868,52 @@ function lgLive(){
   const b=$('#lgAdd'); if(b) b.innerHTML=`${ic('plus')} Ajouter ${r1(m.kcal)} kcal`;
 }
 function lgQtyParse(v){ const x=parseFloat(String(v).replace(',','.')); return x>0&&x<100000?x:null }
+function quickForm(v){ v=v||{}; const val=x=>x!=null&&x!==''?` value="${esc(String(x))}"`:'';
+  return sec('Saisie rapide',`<label class="cell"><span class="cbody"><span class="ct">Nom</span></span><input class="cin" id="qkN" placeholder="Restaurant, plat…" style="width:170px;text-align:right"${val(v.name)}></label>
+      <label class="cell"><span class="cbody"><span class="ct">Calories</span></span><input class="cin" id="qkK" type="number" inputmode="numeric" placeholder="0"${val(v.kcal!=null?r1(v.kcal):null)}><span class="unit">kcal</span></label>
+      <label class="cell"><span class="cbody"><span class="ct">Protéines</span><span class="cs">optionnel</span></span><input class="cin" id="qkP" type="number" inputmode="decimal" placeholder="0"${val(v.p?r1(v.p):null)}><span class="unit">g</span></label>
+      <label class="cell"><span class="cbody"><span class="ct">Glucides</span><span class="cs">optionnel</span></span><input class="cin" id="qkC" type="number" inputmode="decimal" placeholder="0"${val(v.c?r1(v.c):null)}><span class="unit">g</span></label>
+      <label class="cell"><span class="cbody"><span class="ct">Lipides</span><span class="cs">optionnel</span></span><input class="cin" id="qkF" type="number" inputmode="decimal" placeholder="0"${val(v.f?r1(v.f):null)}><span class="unit">g</span></label>`,v.name!=null?null:'Pratique au restaurant : si tu ne connais que les calories, laisse les macros vides.')
+    +`<div class="btnwrap"><button class="btn" data-a="quickAdd">${v.name!=null?ic('check')+' Enregistrer':ic('plus')+' Ajouter'}</button></div>`+(LG&&LG.edit?editBtns():'');
+}
+const editBtns=()=>`<div class="btnwrap" style="margin-top:-14px"><button class="btn gray" data-a="lgDup">${ic('plus')} Ajouter une deuxième fois</button><button class="btn gray" data-a="lgDel" style="color:var(--red)">${ic('trash')} Supprimer</button></div>`;
+/* Retrouve l'aliment d'origine d'une entrée du journal pour pouvoir la modifier */
+function selFromEntry(e){
+  const R=e.ref;
+  if(R&&R.kind==='rx'&&rxOf(R.key)) return {kind:'rx',key:R.key,name:e.name,k:R.k||1};
+  if(R&&R.v) return {kind:R.kind,name:R.name||e.name,v:R.v,u:R.u,pc:R.pc,unit:R.unit||'g',qty:R.qty||100};
+  if(e.src==='rx'){ const r=[...RX,...Object.values(RX_DYN)].find(x=>x.n===e.name); if(r){ const k=parseFloat(String(e.qty||'').replace(/[^\d,.]/g,'').replace(',','.'))||1; return {kind:'rx',key:r.id,name:r.n,k} } }
+  const hit=Object.entries(FOODS).find(([k,f])=>norm(f.n)===norm(e.name)), g=parseFloat(String(e.qty||'').replace(',','.')), byW=g>0&&/\b(g|ml)\b/.test(e.qty||'');
+  if(hit){const f=hit[1]; return {kind:'food',name:f.n,v:f.v,u:f.u,pc:f.pc,unit:'g',qty:byW?g:100}}
+  if(byW) return {kind:'off',name:e.name,v:[e.kcal/g*100,e.p/g*100,e.c/g*100,e.f/g*100],u:/ml/.test(e.qty)?'ml':'g',unit:'g',qty:g};
+  return null;
+}
+function editLogSheet(e,k){
+  LG={meal:e.meal,tab:'quick',q:'',sel:selFromEntry(e),off:null,offErr:null,offLoading:false,offQ:'',edit:{id:e.id,k},qv:{name:e.name,kcal:e.kcal,p:e.p,c:e.c,f:e.f}};
+  openSheet(`<div id="lgBody">${lgBody()}</div>`,{title:'Modifier'});
+}
+function lgSaveEdit(entry,msg){ const arr=logOf(LG.edit.k), i=arr.findIndex(x=>x.id===LG.edit.id); if(i>=0){ arr[i]={...arr[i],...entry}; save() } closeSheet(); render(); toast(msg||'Modifié') }
 function lgBody(){
   const L=LG, ML=mealsList();
   if(!ML.some(m=>m[0]===L.meal)) L.meal=ML[0][0];
   const mealSeg=`<div class="segwrap" style="margin-bottom:12px">${seg('lgMeal',ML.map(m=>[m[0],m[1].split(' ')[0]]),L.meal,'lgMeal')}</div>`;
+  if(L.edit&&!L.sel) return `<div class="pad"><div class="t2">${esc(L.qv.name)}</div><div class="sub">Modifie les valeurs ou change de repas.</div></div>${mealSeg}${quickForm(L.qv)}`;
   if(L.sel){
     const s=L.sel, m=selMac();
     const qtyTxt=s.kind==='rx'?`×${fmtNum(s.k)}`:s.unit==='pc'?`${fmtNum(s.qty)} ${s.pc[1]}${s.qty>1?'s':''}`:`${s.qty} ${s.u||'g'}`;
-    return `<div class="pad"><button class="tbtn" data-a="lgBack">${ic('chevL')}Retour</button><div class="t2" style="margin-top:6px">${esc(s.name)}</div>${s.kind!=='rx'?`<div class="sub">${s.v[0]} kcal pour 100 ${s.u||'g'}</div>`:''}</div>
+    return `<div class="pad">${L.edit?'':`<button class="tbtn" data-a="lgBack">${ic('chevL')}Retour</button>`}<div class="t2" style="margin-top:6px">${esc(s.name)}</div>${s.kind!=='rx'?`<div class="sub">${s.v[0]} kcal pour 100 ${s.u||'g'}</div>`:''}</div>
      ${mealSeg}
      <div class="sec"><div class="grp stats4" id="lgStats">${lgStatsHTML(m)}</div></div>
      ${sec('Quantité',`<div class="cell"><span class="cbody"><span class="ct" id="lgQtyTxt">${qtyTxt}</span>${s.unit==='pc'?`<span class="cs" id="lgQtyG">≈ ${r1(m.g)} ${s.u||'g'}</span>`:''}</span><div class="stp" style="width:136px;flex:none"><button data-a="lgQty" data-d="-1" aria-label="Moins">${ic('minus')}</button>${s.kind==='rx'?`<span>×${fmtNum(s.k)}</span>`:`<input id="lgQtyIn" class="stpin" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" value="${s.unit==='pc'?fmtNum(s.qty):s.qty}" aria-label="Quantité ${s.unit==='pc'?'en '+s.pc[1]+'s':'en '+(s.u||'g')}">`}<button data-a="lgQty" data-d="1" aria-label="Plus">${ic('plus')}</button></div></div>
        ${s.kind!=='rx'&&s.pc?`<div class="cell stack">${seg('lgUnit',[['g',s.u==='ml'?'Millilitres':'Grammes'],['pc','En '+s.pc[1]+'s']],s.unit,'lgUnit')}</div>`:''}
        `)}
-     <div class="btnwrap"><button class="btn" data-a="lgConfirm" id="lgAdd">${ic('plus')} Ajouter ${r1(m.kcal)} kcal</button></div>`;
+     <div class="btnwrap"><button class="btn" data-a="lgConfirm" id="lgAdd">${L.edit?`${ic('check')} Enregistrer · ${r1(m.kcal)} kcal`:`${ic('plus')} Ajouter ${r1(m.kcal)} kcal`}</button></div>${L.edit?editBtns():''}`;
   }
   const tabs=`<div class="segwrap" style="margin-bottom:12px">${seg('lgTab',[['food','Aliments & produits'],['rx','Recettes'],['quick','Rapide']],L.tab==='off'?'food':L.tab,'lgTab')}</div>`;
   let body='';
   if(L.tab==='food'||L.tab==='off') body=`<div class="srch">${ic('search')}<input id="fdQ" type="search" enterkeyhint="search" placeholder="Aliment, produit ou code-barres" value="${esc(L.q)}" autocomplete="off"></div>${L.nf?nfForm():''}<div id="fdList">${L.nf?'':fdList()}</div>`;
   else if(L.tab==='rx'){const list=[...RX,...Object.values(RX_DYN)]; body=sec('Recettes et shakers de l’app',list.map(r=>{const m=rxMac(r);return cell({a:'rxPick',attrs:`data-id="${r.id}"`,icon:`<span class="emo">${r.em}</span>`,bg:'var(--bg4)',title:`<span class="ct sm">${esc(r.n)}</span>`,sub:`${r1(m.kcal)} kcal · P ${r1(m.p)} · G ${r1(m.c)} · L ${r1(m.f)}`,chev:true})}).join(''))}
-  else body=sec('Saisie rapide',`<label class="cell"><span class="cbody"><span class="ct">Nom</span></span><input class="cin" id="qkN" placeholder="Restaurant, plat…" style="width:170px;text-align:right"></label>
-      <label class="cell"><span class="cbody"><span class="ct">Calories</span></span><input class="cin" id="qkK" type="number" inputmode="numeric" placeholder="0"><span class="unit">kcal</span></label>
-      <label class="cell"><span class="cbody"><span class="ct">Protéines</span><span class="cs">optionnel</span></span><input class="cin" id="qkP" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
-      <label class="cell"><span class="cbody"><span class="ct">Glucides</span><span class="cs">optionnel</span></span><input class="cin" id="qkC" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>
-      <label class="cell"><span class="cbody"><span class="ct">Lipides</span><span class="cs">optionnel</span></span><input class="cin" id="qkF" type="number" inputmode="decimal" placeholder="0"><span class="unit">g</span></label>`,'Pratique au restaurant : si tu ne connais que les calories, laisse les macros vides.')+`<div class="btnwrap"><button class="btn" data-a="quickAdd">${ic('plus')} Ajouter</button></div>`;
+  else body=quickForm();
   return mealSeg+tabs+body;
 }
 
@@ -3021,7 +3043,9 @@ async function npOnline(){
 function lgConfirm(){
   const s=LG.sel, m=selMac(); const qty=s.kind==='rx'?`portion ×${fmtNum(s.k)}`:s.unit==='pc'?`${fmtNum(s.qty)} ${s.pc[1]}${s.qty>1?'s':''}`:`${s.qty} ${s.u||'g'}`;
   const ref=s.kind==='rx'?{kind:'rx',key:s.key,k:s.k}:{kind:s.kind,name:s.name,v:s.v,u:s.u,pc:s.pc,unit:s.unit,qty:s.qty};
-  addLog({meal:LG.meal,name:s.name,qty,kcal:m.kcal,p:m.p,c:m.c,f:m.f,src:s.kind,ref});
+  const entry={meal:LG.meal,name:s.name,qty,kcal:m.kcal,p:m.p,c:m.c,f:m.f,src:s.kind,ref};
+  if(LG.edit) return lgSaveEdit(entry,`Modifié · ${r1(m.kcal)} kcal`);
+  addLog(entry);
   const k=r1(m.kcal); closeSheet(); render(); toast(`+${k} kcal ajoutées`);
 }
 
@@ -3180,10 +3204,7 @@ document.addEventListener('click',ev=>{
       break; }
     case 'logDay': { const n=shiftDay(curDay(),+el.dataset.d); LOGDAY=n>=todayK()?null:n; haptic(); render(); break; }
     case 'logAdd': logSheet(el.dataset.m); break;
-    case 'logItem': { const k=curDay(), e=logOf(k).find(x=>x.id===el.dataset.id); if(!e) break;
-      actionSheet({title:esc(e.name),msg:`${r1(e.kcal)} kcal · P ${r1(e.p)} g · G ${r1(e.c)} g · L ${r1(e.f)} g`,actions:[
-        {label:'Ajouter à nouveau',fn:()=>{const {id,t,...c}=e; addLog(c,k); render(); toast(`+${r1(e.kcal)} kcal ajoutées`)}},
-        {label:'Supprimer',style:'destructive',fn:()=>{S.log[k]=logOf(k).filter(x=>x.id!==e.id); save(); render(); toast('Supprimé','trash')}}]}); break; }
+    case 'logItem': { const k=curDay(), e=logOf(k).find(x=>x.id===el.dataset.id); if(!e) break; haptic(); editLogSheet(e,k); break; }
     case 'recentAdd': { const e=recents()[+el.dataset.i]; if(!e) break; const {id,t,meal,_n,...c}=e; addLog({...c,meal:LG.meal}); render(); haptic(); toast(`+${r1(e.kcal)} kcal · ${e.name}`); lgRefresh(); break; }
     case 'recentOpen': { const e=recents()[+el.dataset.i]; if(!e) break; const R=e.ref;
       if(R&&R.kind==='rx'&&rxOf(R.key)) LG.sel={kind:'rx',key:R.key,name:e.name,k:R.k||1};
@@ -3220,7 +3241,11 @@ document.addEventListener('click',ev=>{
     case 'lgConfirm': lgConfirm(); break;
     case 'quickAdd': { const v=id=>parseFloat(String(($('#'+id)||{}).value||'').replace(',','.'))||0, kcal=v('qkK'), p=v('qkP'), c=v('qkC'), f=v('qkF');
       const k2=kcal||(p*4+c*4+f*9); if(!k2) return toastErr('Indique au moins les calories');
-      addLog({meal:LG.meal,name:(($('#qkN')||{}).value||'').trim()||'Saisie rapide',qty:'',kcal:k2,p,c,f,src:'quick'}); closeSheet(); render(); toast(`+${r1(k2)} kcal ajoutées`); break; }
+      const qe={meal:LG.meal,name:(($('#qkN')||{}).value||'').trim()||'Saisie rapide',kcal:k2,p,c,f};
+      if(LG.edit){ lgSaveEdit(qe,`Modifié · ${r1(k2)} kcal`); break; }
+      addLog({...qe,qty:'',src:'quick'}); closeSheet(); render(); toast(`+${r1(k2)} kcal ajoutées`); break; }
+    case 'lgDel': { const E=LG&&LG.edit; if(!E) break; S.log[E.k]=logOf(E.k).filter(x=>x.id!==E.id); save(); closeSheet(); render(); toast('Supprimé','trash'); break; }
+    case 'lgDup': { const E=LG&&LG.edit; if(!E) break; const e=logOf(E.k).find(x=>x.id===E.id); if(!e) break; const {id,t,...c}=e; addLog(c,E.k); closeSheet(); render(); toast(`+${r1(e.kcal)} kcal ajoutées`); break; }
     case 'rxLog': { const r=rxOf(rxId), m=rxMac(r,rxK); addLog({meal:defMeal(),name:r.n,qty:`portion ×${fmtNum(rxK)}`,kcal:m.kcal,p:m.p,c:m.c,f:m.f,src:'rx'},todayK()); closeSheet(); render(); toast(`+${r1(m.kcal)} kcal ajoutées au journal`); break; }
     case 'omadToggle': {
       const n=NUT();
