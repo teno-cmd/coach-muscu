@@ -2481,8 +2481,7 @@ const shopNote=()=>MONEY.amazonTag?'Liens affiliés : en tant que Partenaire Ama
 function rxShopSec(r){const ids=[...new Set(r.ing.map(([id])=>id))].filter(id=>SHOP_ING[id]);
   return ids.length?sec('Où l’acheter',ids.map(id=>shopLink(esc(ING[id].n),'Voir sur Amazon',shopURL(SHOP_ING[id]))).join(''),shopNote()):''}
 function eqShopSec(p){const miss=Object.entries(SHOP_EQ).filter(([k])=>!((p&&p.equip)||[]).includes(k)); if(!miss.length) return '';
-  return sec(p&&(p.equip||[]).length?'Compléter mon matériel':'Équiper ma salle à la maison',miss.map(([k,q])=>shopLink(`${EQUIP[k].em} ${esc(EQUIP[k].n)}`,'Voir sur Amazon',shopURL(q))
-  +`<a class="cell" href="${shopURL(q,'decathlon')}" target="_blank" rel="noopener" style="--inset:16px;min-height:36px;padding-top:4px"><span class="cbody"><span class="cs">Voir chez Decathlon</span></span>${CH}</a>`).join(''),shopNote())}
+  return sec(p&&(p.equip||[]).length?'Compléter mon matériel':'Équiper ma salle à la maison',miss.map(([k,q])=>shopLink(`${EQUIP[k].em} ${esc(EQUIP[k].n)}`,'Voir sur Amazon',shopURL(q))).join(''),shopNote())}
 const supportSec=()=>MONEY.support.url?sec('Soutenir Coach Muscu',`<a class="cell" href="${MONEY.support.url}" target="_blank" rel="noopener"><span class="cico" style="background:var(--pink)">❤️</span><span class="cbody"><span class="ct">Offrir un café au développeur</span><span class="cs">Don ponctuel via ${esc(MONEY.support.label)}, sans abonnement</span></span>${CH}</a>`,'L’appli reste 100 % gratuite. Les dons aident à payer son développement.'):'';
 
 /* ---------- Mentions légales et confidentialité ---------- */
@@ -2503,7 +2502,7 @@ function legalSheet(){
      +T('jsDelivr','Le lecteur de code-barres est téléchargé depuis jsDelivr la première fois que tu ouvres le scanner.')
      +(STATS.code?T('GoatCounter (statistiques anonymes)','Pour savoir combien de personnes utilisent l’appli, GoatCounter compte les ouvertures et quelques actions (séance terminée, record, partage, clic sur un lien d’achat ou de don). Sans cookie ni identifiant, et sans aucune de tes données : ni profil, ni poids, ni séances, ni repas. Tu peux le désactiver dans Profil › Réglages.'):'')
      +T('GitHub','Comme tout hébergeur, GitHub peut enregistrer l’adresse IP des visites pour la sécurité du site.')
-     +T('Liens externes','Amazon, Decathlon, Ko-fi, YouTube et les sources scientifiques s’ouvrent hors de l’appli. Ces sites appliquent leurs propres règles de confidentialité et de cookies.'),
+     +T('Liens externes','Amazon, Ko-fi, YouTube et les sources scientifiques s’ouvrent hors de l’appli. Ces sites appliquent leurs propres règles de confidentialité et de cookies.'),
      'Open Food Facts et jsDelivr ne sont contactés que si tu utilises la fonction concernée.')}
    ${sec('Liens d’achat et dons',
       T('Liens « Où l’acheter »',MONEY.amazonTag?'Certains liens sont affiliés : en tant que Partenaire Amazon, Coach Muscu réalise un bénéfice sur les achats remplissant les conditions requises. Le prix reste le même pour toi.':'Les liens « Où l’acheter » mènent vers des boutiques en ligne, à titre indicatif. S’ils deviennent affiliés, cette page et les fiches concernées l’indiqueront.')
