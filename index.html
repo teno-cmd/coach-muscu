@@ -253,6 +253,7 @@ svg.fig .pd{fill:#48484a}
 .edrow{gap:10px}.edtap{flex:1;min-width:0;text-align:left;display:flex;flex-direction:column;background:none;border:0;color:inherit;padding:0}
 .edmv{display:flex;flex-direction:column;gap:2px;flex:none}.edmv button{width:34px;height:26px;display:grid;place-items:center;border-radius:8px;background:var(--fill4);color:var(--label)}.edmv button svg{width:14px;height:14px;transform:rotate(90deg)}.edmv button:disabled{opacity:.25}
 .cell.off{opacity:.4;pointer-events:none}
+.zchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.zchips .chip{border:0}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:0 16px 14px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}.chip{flex:none;padding:7px 13px;border-radius:999px;background:var(--fill4);color:var(--label);font:500 14px var(--font)}.chip.on{background:var(--tint);color:#000}
 .radd{display:grid;place-items:center;width:40px;height:40px;margin:-8px -8px -8px 0;border-radius:50%;color:var(--tint);flex:none}.radd svg{width:24px;height:24px}.radd:active{background:var(--tint-d)}
 .stp .stpin{flex:1;min-width:0;width:100%;height:40px;border:0;background:transparent;color:var(--label);text-align:center;font:600 17px var(--round);font-variant-numeric:tabular-nums;padding:0;border-radius:8px;-webkit-appearance:none;appearance:none}.stp .stpin:focus{outline:2px solid var(--tint);outline-offset:-2px}
@@ -702,6 +703,8 @@ Object.assign(PAT,{
  overheadDB:{anc:'foot',vb:'0 -40 200 200',A:{ax:110,ay:150,t:178,th:0,sh:0,ua:172,fa:-15},B:{ua:168,fa:170},pr:['db']},
 });
 PAT.lungeBW={...PAT.lunge,pr:PAT.lunge.pr.filter(x=>x!=='db')};
+PAT.kickback={anc:'foot',A:{ax:96,ay:150,t:150,th:4,sh:0,th2:8,sh2:-20,ua:75,fa:85},B:{th2:-50,sh2:-62},pr:[{l:[150,150,150,40,5]}]};
+PAT.abduction={front:1,A:{ax:100,ay:71,th:3,sh:0,ua:28,fa:10},B:{th:24,sh:20},pr:[{l:[80,76,120,76,8]}]};
 const HOME_EX={
  pompes:{n:'Pompes',eq:'Poids du corps',m:'pecs',t:'C',u:'pdc',r:0,p:'pushup',req:['pdc'],
   c:['Mains un peu plus larges que les épaules, sous la poitrine','Corps gainé en planche : fessiers et abdos serrés','Descends la poitrine à 2–3 cm du sol, coudes à ~45° du buste','Pousse fort en gardant la ligne épaules-hanches-chevilles'],e:['Hanches qui s’affaissent ou remontent','Coudes à 90° du buste']},
@@ -775,6 +778,20 @@ Object.assign(EX,HOME_EX);
 Object.assign(EX.curl_halt,{req:['halt']});Object.assign(EX.elev_lat_halt,{req:['halt']});Object.assign(EX.dev_mil_halt,{req:['halt']});
 Object.assign(EX.rdl_halt,{req:['halt']});Object.assign(EX.fentes_halt,{req:['halt']});Object.assign(EX.rowing_halt,{req:['halt']});
 Object.assign(EX.dc_incl_halt,{req:['halt','banc']});Object.assign(EX.tractions,{req:['traction'],hard:true});
+/* Exercices supplémentaires pour cibler fessiers et abdos (en salle et, si le matériel le permet, à la maison) */
+Object.assign(EX,{
+ kickback_poulie:{n:'Kickback fessier à la poulie basse',eq:'Poulie basse + sangle de cheville (ou élastique)',m:'fessiers',t:'I',u:'poulie',r:.12,p:'kickback',req:['elastique'],
+  c:['Sangle à la cheville, mains sur le montant, buste légèrement penché','Pousse la jambe vers l’arrière en serrant le fessier','Pause 1 s en arrière, sans cambrer','Retour lent jusqu’à ce que le pied repasse sous la hanche'],e:['Cambrer le bas du dos pour aller plus loin','Balancer la jambe avec élan']},
+ abduction_machine:{n:'Abduction de hanche',eq:'Machine abducteurs (ou élastique au-dessus des genoux)',m:'fessiers',t:'I',u:'mach',r:.5,p:'abduction',req:['elastique'],
+  c:['Assis dos calé, coussins contre l’extérieur des genoux','Écarte les genoux en contrôlant ; buste un peu penché en avant pour le haut des fessiers','Pause 1 s en ouverture','Referme lentement sans laisser les charges se toucher'],e:['Aller-retour rapide avec élan','Décoller les fessiers du siège']},
+ extension_45:{n:'Extension 45° orientée fessiers',eq:'Banc à lombaires 45° (+ disque contre la poitrine)',m:'fessiers',t:'C',u:'pdc',r:0,p:'hinge',req:['banc45'],
+  c:['Bassin juste au-dessus du coussin, pieds légèrement ouverts','Dos légèrement arrondi, menton rentré','Remonte en poussant les hanches contre le coussin et en serrant les fessiers','Arrête-toi quand le corps est aligné, sans hyper-extension'],e:['Remonter avec les lombaires en cambrant','Descendre ou remonter avec élan']},
+ bucheron_poulie:{n:'Bûcheron à la poulie (haut vers bas)',eq:'Poulie haute (ou élastique ancré en hauteur)',m:'abdos',t:'A',u:'poulie',r:.12,p:'straightPulldown',req:['elastique'],
+  c:['De profil à la poulie, bras presque tendus','Tire en diagonale vers la hanche opposée en tournant le buste','Le mouvement vient des abdos et des obliques, pas des bras','Retour lent, puis change de côté'],e:['Tourner seulement les bras','Plier le dos en avant']},
+ crunch_bicyclette:{n:'Crunch bicyclette (obliques)',eq:'Poids du corps',m:'abdos',t:'A',u:'pdc',r:0,p:'crunch',req:['pdc'],homeOnly:true,any:true,
+  c:['Sur le dos, mains derrière la tête sans tirer','Amène le coude vers le genou opposé en tendant l’autre jambe','Alterne lentement, épaules décollées du sol','Expire à chaque rotation'],e:['Tirer sur la nuque','Aller trop vite sans tourner le buste']},
+});
+for(const k of ['crunch_sol','releve_jambes_sol','pont_fessier']) EX[k].any=true; /* exercices au sol : faisables aussi en salle */
 Object.assign(EX.rdl_barre,{req:['barre']});Object.assign(EX.rowing_barre,{req:['barre']});Object.assign(EX.hip_thrust,{req:['barre','banc']});
 const HOME_ALT={
  squat_barre:['goblet_squat','fentes_halt','fentes_bulg_pdc','squat_pdc'],
@@ -787,6 +804,7 @@ const HOME_ALT={
  rdl_barre:['rdl_barre','rdl_halt','kb_swing','rdl_unilat_pdc'],
  rdl_halt:['rdl_halt','kb_swing','rdl_unilat_pdc'],
  hip_thrust:['hip_thrust','pont_fessier'],
+ kickback_poulie:['kickback_poulie','pont_fessier'],abduction_machine:['abduction_machine','pont_fessier'],extension_45:['pont_fessier','kb_swing','rdl_unilat_pdc'],bucheron_poulie:['bucheron_poulie','crunch_bicyclette'],
  mollets_debout:['mollets_unilat'],
  dc_barre:['dc_halt_banc','pompes'],
  chest_press:['dc_halt_banc','pompes','pompes_declinees'],
@@ -821,7 +839,7 @@ let _placeCtx=null;
 const curPlace=()=>_placeCtx||(S.active&&S.active.place)||(S.profile&&S.profile.place)||'gym';
 const placeName=pl=>pl==='home'?'À la maison':'En salle';
 function hasEq(id,p){const r=EX[id].req; if(!r) return false; return r.every(tok=>tok.split('|').some(e=>e==='pdc'||(p.equip||[]).includes(e)))}
-function fits(id,p){return p&&p.place==='home'?hasEq(id,p):!EX[id].homeOnly&&!((p&&p.noMach)||[]).includes(MACH_OF[id])}
+function fits(id,p){return p&&p.place==='home'?hasEq(id,p):!(EX[id].homeOnly&&!EX[id].any)&&!((p&&p.noMach)||[]).includes(MACH_OF[id])}
 function resolveEx(id,p,used){
   if(!p||p.place!=='home') return gymResolve(id,p||{},used);
   for(const c of [...(HOME_ALT[id]||[]),id]) if(EX[c]&&hasEq(c,p)&&!used.has(c)) return c;
@@ -1012,7 +1030,7 @@ const MACH_OF={squat_barre:'rack',hack_squat:'hack',presse_cuisses:'presse45',le
  dc_barre:'benchflat',chest_press:'chestpress',dc_incl_halt:'benchinc',pec_fly_poulie:'crossover',pec_deck:'pecdeck',dips_assist:'dips',tirage_vertical:'latpull',tractions:'dips',
  rowing_assis_poulie:'lowrow',rowing_machine:'isorow',rowing_barre:'barre',rowing_halt:'benchplain',pullover_poulie:'crossover',dev_mil_halt:'benchinc',shoulder_press_machine:'shoulderpress',
  elev_lat_halt:'halteres',elev_lat_poulie:'crossover',face_pull:'crossover',reverse_fly:'pecdeck',rdl_barre:'barre',rdl_halt:'halteres',fentes_halt:'benchplain',hip_thrust:'hipthrust',
- curl_halt:'halteres',curl_poulie:'crossover',curl_pupitre:'preacher',triceps_poulie:'crossover',triceps_overhead:'crossover',crunch_poulie:'crossover',releve_jambes:'chaise'};
+ curl_halt:'halteres',curl_poulie:'crossover',curl_pupitre:'preacher',triceps_poulie:'crossover',triceps_overhead:'crossover',crunch_poulie:'crossover',releve_jambes:'chaise',kickback_poulie:'crossover',bucheron_poulie:'crossover'};
 /* Enseignes : seules les marques documentées publiquement sont indiquées. */
 const CHAINS={
  onair:{n:'ON AIR Fitness',brands:'Technogym (machines guidées), Hammer Strength (machines à disques), Gym80, et Panatta dans les plus grands clubs'},
@@ -1063,7 +1081,7 @@ function gymBody(keys,ph){
 }
 function gymResolve(id,p,used){
   const no=p.noMach||[]; if(!no.includes(MACH_OF[id])) return id;
-  const ok=x=>EX[x]&&!EX[x].homeOnly&&!no.includes(MACH_OF[x])&&!used.has(x);
+  const ok=x=>EX[x]&&!(EX[x].homeOnly&&!EX[x].any)&&!no.includes(MACH_OF[x])&&!used.has(x);
   for(const c of (HOME_ALT[id]||[])) if(ok(c)) return c;
   const m=EX[id].m, rk={H:0,C:1,I:2,A:3}, t=rk[EX[id].t];
   return Object.keys(EX).filter(x=>EX[x].m===m&&ok(x)).sort((a,b)=>Math.abs(rk[EX[a].t]-t)-Math.abs(rk[EX[b].t]-t))[0]||null;
@@ -1127,6 +1145,7 @@ const ANM={
  oiseau_halt:[['delt_post'],['rhomboides']],goblet_squat:[['quads','fessiers'],['adducteurs','abdos']],squat_pdc:[['quads','fessiers'],['adducteurs']],fentes_bulg_pdc:[['quads','fessiers'],['adducteurs']],
  leg_ext_elastique:[['quads'],[]],rdl_unilat_pdc:[['ischios','fessiers'],['lombaires']],kb_swing:[['fessiers','ischios'],['lombaires','abdos']],leg_curl_glisse:[['ischios'],['fessiers']],
  leg_curl_elastique:[['ischios'],[]],pont_fessier:[['fessiers'],['ischios']],mollets_unilat:[['mollets'],[]],curl_elastique:[['biceps'],['avant_bras']],triceps_elastique:[['triceps'],[]],
+ kickback_poulie:[['fessiers'],['ischios']],abduction_machine:[['fessiers'],[]],extension_45:[['fessiers','lombaires'],['ischios']],bucheron_poulie:[['obliques','abdos'],[]],crunch_bicyclette:[['abdos','obliques'],[]],
  extension_halt_tete:[['triceps'],[]],dips_chaise:[['triceps'],['pecs','delt_ant']],crunch_sol:[['abdos'],['obliques']],releve_jambes_sol:[['abdos'],['obliques']],
 };
 function musclesOf(id){const r=ANM[id]||ANM._d[EX[id].m]||[[],[]];return {p:r[0],s:r[1]}}
@@ -1177,8 +1196,66 @@ function prescribe(id,i,p){
     if(c&&b&&b>c*1.15){x.rmin=Math.min(x.rmin+4,20);x.rmax=Math.min(x.rmax+6,25);x.capped=true}}
   return x;
 }
+/* ---------- Zones travaillées ----------
+   On peut n'entraîner qu'une partie du corps (haut seul, bas seul, abdos + fessiers…).
+   Le volume est réparti sur les séances : 10 à 20 séries directes par muscle et par semaine,
+   au moins 2 séances par muscle quand c'est possible (Schoenfeld et al., 2016 et 2017). */
+const ZONES={pecs:{n:'Pectoraux',m:['pecs']},dos:{n:'Dos',m:['dos']},epaules:{n:'Épaules',m:['epaules']},bras:{n:'Bras',m:['biceps','triceps']},
+ abdos:{n:'Abdos',m:['abdos']},fessiers:{n:'Fessiers',m:['fessiers']},cuisses:{n:'Cuisses',m:['quads','ischios']},mollets:{n:'Mollets',m:['mollets']}};
+const ZK=Object.keys(ZONES);
+const FOCUS_PRESETS={full:{n:'Corps entier',d:'Tous les muscles, avec le split de ton choix',z:ZK},
+ haut:{n:'Haut du corps',d:'Pecs, dos, épaules, bras et abdos · pas de jambes',z:['pecs','dos','epaules','bras','abdos']},
+ bas:{n:'Bas du corps',d:'Fessiers, cuisses et mollets · pas de haut du corps',z:['fessiers','cuisses','mollets']},
+ abfess:{n:'Abdos & fessiers',d:'Uniquement la sangle abdominale et les fessiers',z:['abdos','fessiers']}};
+const focusOf=p=>{const z=ZK.filter(k=>(p&&p.focus||[]).includes(k)); return z.length&&z.length<ZK.length?z:null};
+const focusPreset=z=>{ if(!z) return 'full'; const s=z.join(); return Object.keys(FOCUS_PRESETS).find(k=>k!=='full'&&ZK.filter(x=>FOCUS_PRESETS[k].z.includes(x)).join()===s)||'perso'};
+const focusName=p=>{const z=focusOf(p), k=focusPreset(z); return k==='perso'?z.map(x=>ZONES[x].n).join(' + '):FOCUS_PRESETS[k].n};
+const progName=p=>focusOf(p)?focusName(p):SPLITS[splitOf(p)].n;
+const F_UP=['pecs','dos','epaules','biceps','triceps'], F_LO=['quads','ischios','fessiers','mollets'], F_SMALL={biceps:.7,triceps:.7,mollets:.7,abdos:.8}, F_RK={H:0,C:1,I:2,A:3};
+function focusGroups(ms,n){
+  const up=ms.filter(m=>F_UP.includes(m)), lo=ms.filter(m=>F_LO.includes(m)), ab=ms.includes('abdos');
+  let G=null, names=null;
+  if(n>=4&&up.length>=2&&lo.length>=2){G=[up,lo];names=['Haut du corps','Bas du corps']}
+  else if(n>=4&&!lo.length&&up.length>=4){const pu=up.filter(m=>['pecs','epaules','triceps'].includes(m)), pl=up.filter(m=>['dos','biceps'].includes(m)); if(pu.length&&pl.length){G=[pu,pl];names=['Poussée','Tirage']}}
+  if(!G) return {G:[ms],names:null};
+  if(ab) G.forEach(g=>g.push('abdos'));
+  return {G,names};
+}
+function focusCands(m,p){
+  return Object.keys(EX).filter(id=>EX[id].m===m&&fits(id,p)&&!(p.level==='deb'&&BEG_SUB[id]))
+    .sort((a,b)=>F_RK[EX[a].t]-F_RK[EX[b].t]||(EX[a].homeOnly?1:0)-(EX[b].homeOnly?1:0));
+}
+function genFocus(p,z){
+  const ms=[...new Set(z.flatMap(k=>ZONES[k].m))], n=+p.days||3, {G,names}=focusGroups(ms,n);
+  const sess={}; for(let i=0;i<n;i++) G[i%G.length].forEach(m=>sess[m]=(sess[m]||0)+1);
+  const base=({deb:10,int:14,adv:18})[p.level]||14, boost=ms.length<=3?1.4:1, seen={}, occ=G.map(()=>0);
+  const cap=({deb:6,int:7,adv:8})[p.level]-(p.goal==='seche'?1:0)+(ms.length<=3?1:0);
+  const maxSets=({deb:18,int:22,adv:25})[p.level]-(p.goal==='seche'?2:0);
+  const prev=_placeCtx; _placeCtx=p.place||'gym'; const days=[];
+  for(let i=0;i<n;i++){
+    const gi=i%G.length, o=occ[gi]++, list=[];
+    /* Séries visées par muscle pour cette séance, ramenées à un total raisonnable (≈ 60 min max) */
+    const want={}; G[gi].forEach(m=>{ if(focusCands(m,p).length) want[m]=Math.max(3,Math.min(10,Math.round(Math.min(20,Math.round(base*(F_SMALL[m]||1)*boost))/sess[m]))) });
+    const tot=Object.values(want).reduce((a,v)=>a+v,0), kf=Math.min(1,maxSets/tot);
+    G[gi].forEach(m=>{
+      if(!want[m]) return; const c=focusCands(m,p);
+      const per=Math.max(2,Math.round(want[m]*kf));
+      const ne=Math.min(c.length,per<=4?1:per<=7?2:3), k0=(seen[m]=(seen[m]||0)+1)-1;
+      const pick=[]; for(let j=0;j<ne;j++) pick.push(c[(k0*ne+j)%c.length]);
+      const sp=Math.floor(per/ne), ex=per-sp*ne;
+      pick.forEach((id,j)=>list.push({id,m,sets:Math.min(5,sp+(j<ex?1:0))}));
+    });
+    while(list.length>cap){ const cnt={}; list.forEach(x=>cnt[x.m]=(cnt[x.m]||0)+1);
+      let j=list.length-1; while(j>=0&&cnt[list[j].m]<2) j--; if(j<0) j=list.length-1;
+      const [x]=list.splice(j,1), sib=list.find(y=>y.m===x.m); if(sib) sib.sets=Math.min(4,Math.max(sib.sets,sib.sets+x.sets-1)); }
+    list.sort((a,b)=>F_RK[EX[a.id].t]-F_RK[EX[b.id].t]);
+    const rounds=Math.ceil(n/G.length), nm=(names?names[gi]:focusName(p))+(rounds>1?' '+'ABCDEF'[o]:'');
+    days.push({k:'FOCUS',n:nm,f:[...new Set(list.map(x=>MUS[x.m]))].join(' · '),place:p.place||'gym',ex:list.map((x,j)=>({...prescribe(x.id,j,p),sets:x.sets}))});
+  }
+  _placeCtx=prev; return days;
+}
 function generate(p){
-  const days = SPLITS[splitOf(p)].days.map(k=>buildDay(k,p));
+  const z=focusOf(p), days = z?genFocus(p,z):SPLITS[splitOf(p)].days.map(k=>buildDay(k,p));
   const pv=_placeCtx; _placeCtx=p.place||'gym'; applyPrio(days,p); _placeCtx=pv;
   return {days,created:Date.now()};
 }
@@ -1485,11 +1562,26 @@ function profileForm(){
    +sec('Entraînement',
       `<div class="cell stack"><span class="ct">Niveau</span>${seg('level',[['deb','Débutant'],['int','Intermédiaire'],['adv','Avancé']],F.level)}<span class="cs">Débutant : moins de 6 mois · Intermédiaire : 6 mois à 3 ans · Avancé : plus de 3 ans.</span></div>
        <div class="cell stack"><span class="ct">Séances par semaine</span>${seg('days',[[2,'2'],[3,'3'],[4,'4'],[5,'5'],[6,'6']],F.days)}</div><div id="splitBox">${splitRows(F)}</div>`)
+   +sec('Zones à travailler',`<div id="focusBox">${focusRows(F)}</div>`,FOCUS_NOTE)
    +sec('Lieu d’entraînement',placeRows(F),'À la maison, les machines sont remplacées par des alternatives adaptées à ton matériel, en gardant les mêmes muscles.')
    +sec('Objectif',Object.entries(GOALS).map(([k,g])=>cell({a:'setF',attrs:`data-k="goal" data-val="${k}"`,cls:'goal '+(F.goal===k?'sel':''),icon:ic(GOAL_UI[k][0],1),bg:GOAL_UI[k][1],title:g.n,sub:g.d,right:`<span class="ck">${ic('check')}</span>`})).join(''))
    +sec('Muscles prioritaires (optionnel)',Object.entries(PRIO).map(([g,o])=>cell({a:'prioF',attrs:`data-g="${g}"`,cls:'goal '+(F.prio.includes(g)?'sel':''),title:o.n,right:`<span class="ck">${ic('check')}</span>`})).join(''),'Jusqu’à 3 groupes : plus de volume et placés en début de séance.');
 }
+const FOCUS_NOTE='Les zones non choisies ne sont pas entraînées. Le volume est réparti sur tes séances : 10 à 20 séries par muscle et par semaine.';
+function focusRows(o){
+  const z=focusOf(o), pk=focusPreset(z), sel=new Set(z||ZK);
+  return Object.entries(FOCUS_PRESETS).map(([k,x])=>cell({a:'focusPre',attrs:`data-k="${k}"`,cls:'goal '+(pk===k?'sel':''),title:x.n,sub:x.d,right:`<span class="ck">${ic('check')}</span>`})).join('')
+   +`<div class="cell stack"><span class="ct">Sur-mesure${pk==='perso'?' <span class="tint" style="font-size:13px">· sélectionné</span>':''}</span><span class="cs">Touche une zone pour l’ajouter ou la retirer.</span><div class="zchips">${ZK.map(k=>`<button class="chip ${sel.has(k)?'on':''}" data-a="focusZ" data-k="${k}" aria-pressed="${sel.has(k)}">${ZONES[k].n}</button>`).join('')}</div></div>`;
+}
+function focusRefresh(){ const b=$('#focusBox'); if(b) b.innerHTML=focusRows(F); const sb=$('#splitBox'); if(sb) sb.innerHTML=splitRows(F) }
+function focusSheet(){
+  F={...S.profile,focus:[...(S.profile.focus||[])],_sheet:true};
+  openSheet(`<div class="pad"><div class="t2">Zones travaillées</div><div class="sub">Choisis les parties du corps à entraîner. Ton programme est régénéré avec uniquement ces zones ; ton historique est conservé.</div></div>
+   ${sec('',`<div id="focusBox">${focusRows(F)}</div>`,FOCUS_NOTE)}
+   <div class="btnwrap"><button class="btn" data-a="focusSave">Appliquer au programme</button></div>`,{title:'Zones'});
+}
 function splitRows(o){
+  if(focusOf(o)) return `<div class="cell"><span class="cico" style="background:var(--purple)">${ic('target')}</span><span class="cbody"><span class="ct">Séances construites autour de tes zones</span><span class="cs">${esc(focusName(o))} · le split est choisi automatiquement selon ton nombre de séances.</span></span></div>`;
   const cur=splitOf(o), rec=AUTO_SPLIT[o.days];
   return splitsFor(o.days).map(([k,x])=>cell({a:'setF',attrs:`data-k="split" data-val="${k}"`,cls:'goal '+(cur===k?'sel':''),title:`${x.n}${k===rec?' <span class="tint" style="font-size:13px">· recommandé</span>':''}`,sub:x.d,right:`<span class="ck">${ic('check')}</span>`})).join('');
 }
@@ -1582,13 +1674,14 @@ function vProgram(){
   if(progDay==null||progDay>=days.length) progDay=nextIdx();
   const q=planQueue(), rec=recovery(Date.now());
   const vol=volumeByMuscle(), mx=Math.max(...vol.map(v=>v[1]),20);
-  return page('Programme',{sub:`${placeName(p.place)} · ${S.program.custom?'Programme personnalisé':SPLITS[splitOf(p)].n} · ${GOALS[p.goal].n} · RIR ${rir()}`},
+  return page('Programme',{sub:`${placeName(p.place)} · ${S.program.custom?'Programme personnalisé':esc(progName(p))} · ${GOALS[p.goal].n} · RIR ${rir()}`},
    `<div class="segwrap">${seg('progDay',days.map((d,i)=>[i,'J'+(i+1)]),progDay,'progDay')}</div>
     <div id="dayView">${vDay(progDay)}</div>
     ${sec('Planning à venir',q.map((i,k)=>{const d=days[i],[lb]=readyBadge(readiness(d,rec));return cell({a:'progJump',attrs:`data-i="${i}"`,icon:`<b style="color:${k?'#fff':'#000'}">${k+1}</b>`,bg:k?'var(--bg4)':'var(--tint)',title:esc(d.n),sub:k?esc(d.f):`Prochaine · ${lb}`,chev:true})}).join('')
       +cell({a:'change',icon:ic('swap'),bg:'var(--blue)',title:'Changer, remplacer ou sauter',sub:'Autre séance, séance rappel ciblée ou séance sautée',chev:true}),
       `${S.cycle.done.length} sur ${days.length} séances faites dans ce cycle. L’ordre s’adapte à ta récupération (48 à 72 h par muscle), évite d’enchaîner les mêmes muscles et rattrape le volume en retard.`,true)}
-    ${sec('Personnaliser',cell({a:'splitOpen',icon:ic('list'),bg:'var(--purple)',title:'Split',value:S.program.custom?'Perso':esc(SPLITS[splitOf(p)].n),chev:true})
+    ${sec('Personnaliser',cell({a:'focusOpen',icon:ic('target'),bg:'var(--pink)',title:'Zones travaillées',value:esc(focusOf(p)?focusName(p):'Corps entier'),chev:true})
+      +cell({a:'splitOpen',icon:ic('list'),bg:'var(--purple)',title:'Split',value:S.program.custom?'Perso':focusOf(p)?'Auto':esc(SPLITS[splitOf(p)].n),chev:true})
       +cell({a:'addDayOpen',icon:ic('plus'),bg:'var(--blue)',title:'Ajouter un jour',sub:'Séance vide ou à partir d’un modèle',chev:true})
       +(S.program.custom?cell({a:'resetAuto',icon:ic('swap'),bg:'var(--orange)',title:'Revenir au programme automatique',sub:'Remplace tes modifications par le programme généré'}):''),
       S.program.custom?'Programme personnalisé : il n’est plus modifié automatiquement quand tu changes ton profil, ton lieu ou tes priorités.':'Choisis ton split, ou touche « Modifier la séance » sur un jour pour créer tes propres séances.',true)}
@@ -1661,7 +1754,7 @@ function libPick(id){
 }
 function splitSheet(){
   const cur=S.program.custom?null:splitOf(S.profile);
-  openSheet(`<div class="pad"><div class="t2">Choisir un split</div><div class="sub">Le nombre de séances par semaine s’adapte au split choisi.</div></div>
+  openSheet(`<div class="pad"><div class="t2">Choisir un split</div><div class="sub">Le nombre de séances par semaine s’adapte au split choisi.${focusOf(S.profile)?` Choisir un split repasse en <b>corps entier</b> (actuellement : ${esc(focusName(S.profile))}).`:''}</div></div>
    ${[2,3,4,5,6].map(n=>sec(`${n} séances / semaine`,splitsFor(n).map(([k,x])=>cell({a:'splitPick',attrs:`data-k="${k}"`,cls:'goal '+(cur===k?'sel':''),title:`${x.n}${AUTO_SPLIT[n]===k?' <span class="tint" style="font-size:13px">· recommandé</span>':''}`,sub:`${x.d} · ${x.days.map(d=>TPL[d].n).join(', ')}`,right:`<span class="ck">${ic('check')}</span>`})).join(''))).join('')}`,{title:'Split'});
 }
 function addDaySheet(){
@@ -2812,12 +2905,12 @@ document.addEventListener('click',ev=>{
       if(!(w>=35&&w<=250)) return toastErr('Indique un poids valide');
       if(!(h>=130&&h<=230)) return toastErr('Indique ta taille en cm');
       const first=!S.profile;
-      const daysChanged=!S.profile||S.profile.days!==+F.days, nsplit=splitOf({days:+F.days,split:F.split}), splitChanged=!S.profile||splitOf(S.profile)!==nsplit;
-      S.profile={split:nsplit,sex:F.sex,age,weight:w,height:h,level:F.level,goal:F.goal,days:+F.days,prio:(F.prio||[]).slice(0,3),place:F.place||'gym',equip:[...(F.equip||[])],hmax:+F.hmax||20,kbmax:+F.kbmax||16,chain:F.chain||'onair',noMach:[...(F.noMach||[])]};
+      const daysChanged=!S.profile||S.profile.days!==+F.days, nsplit=splitOf({days:+F.days,split:F.split}), splitChanged=!S.profile||splitOf(S.profile)!==nsplit||(focusOf(S.profile)||[]).join()!==(focusOf(F)||[]).join();
+      S.profile={split:nsplit,sex:F.sex,age,weight:w,height:h,level:F.level,goal:F.goal,days:+F.days,prio:(F.prio||[]).slice(0,3),place:F.place||'gym',equip:[...(F.equip||[])],hmax:+F.hmax||20,kbmax:+F.kbmax||16,chain:F.chain||'onair',noMach:[...(F.noMach||[])],focus:[...(focusOf(F)||[])]};
       const fin=()=>{ S.program=generate(S.profile); if(daysChanged||splitChanged) S.cycle={done:[],skipped:[]}; progDay=null; EDIT=null; F=null; save();
         toast(first?'Programme généré':'Programme mis à jour'); go(first?'home':'program','fade') };
       if(S.program&&S.program.custom){
-        if(daysChanged||splitChanged) actionSheet({title:'Remplacer ton programme personnalisé ?',msg:`Le split « ${esc(SPLITS[nsplit].n)} » va générer un nouveau programme. Tes séances modifiées seront remplacées (ton historique est conservé).`,
+        if(daysChanged||splitChanged) actionSheet({title:'Remplacer ton programme personnalisé ?',msg:`Le programme « ${esc(progName({days:+F.days,split:nsplit,focus:focusOf(F)||[]}))} » va générer un nouveau programme. Tes séances modifiées seront remplacées (ton historique est conservé).`,
           actions:[{label:'Générer le nouveau programme',style:'destructive',fn:fin},{label:'Garder mon programme perso',fn:()=>{F=null;save();toast('Profil enregistré · programme perso conservé');go('program','fade')}}]});
         else { F=null; save(); toast('Profil enregistré · programme perso conservé'); go('program','fade') }
         break; }
@@ -2870,7 +2963,16 @@ document.addEventListener('click',ev=>{
       if(k){ d=buildDay(k,p); d.edited=true } else d={k:'CUSTOM',n:'Séance '+(S.program.days.length+1),f:'Séance vide',place:p.place||'gym',ex:[],edited:true};
       S.program.days.push(d); markCustom(d); const i=S.program.days.length-1; closeSheet(); EDIT=i; progDay=i; render(); window.scrollTo({top:0,behavior:'smooth'}); toast('Jour ajouté'); if(!k) setTimeout(()=>libSheet('add'),450); break; }
     case 'splitOpen': splitSheet(); break;
-    case 'splitPick': { const k=el.dataset.k, apply=()=>{ S.profile.split=k; S.profile.days=SPLITS[k].days.length; S.program=generate(S.profile); S.cycle={done:[],skipped:[]}; EDIT=null; progDay=null; save(); closeSheet(); render(); toast(`Split : ${SPLITS[k].n}`) };
+    case 'focusOpen': focusSheet(); break;
+    case 'focusPre': { if(!F) break; readForm(); const k=el.dataset.k; F.focus=k==='full'?[]:[...FOCUS_PRESETS[k].z]; haptic(); focusRefresh(); break; }
+    case 'focusZ': { if(!F) break; readForm(); const cur=new Set(focusOf(F)||ZK), k=el.dataset.k;
+      if(cur.has(k)){ if(cur.size===1) return toastErr('Garde au moins une zone'); cur.delete(k) } else cur.add(k);
+      F.focus=cur.size===ZK.length?[]:ZK.filter(x=>cur.has(x)); haptic(); focusRefresh(); break; }
+    case 'focusSave': { if(!F) break; const nf=[...(focusOf(F)||[])], same=nf.join()===(focusOf(S.profile)||[]).join();
+      const apply=()=>{ S.profile.focus=nf; F=null; S.program=generate(S.profile); S.cycle={done:[],skipped:[]}; EDIT=null; progDay=null; save(); closeSheet(); render(); toast('Zones : '+focusName(S.profile)) };
+      if(same){ closeSheet(); break }
+      if(S.program.custom) actionSheet({title:'Remplacer ton programme personnalisé ?',msg:'Tes séances modifiées seront remplacées par un programme centré sur les zones choisies. Ton historique est conservé.',actions:[{label:'Appliquer les zones',style:'destructive',fn:apply}]}); else apply(); break; }
+    case 'splitPick': { const k=el.dataset.k, apply=()=>{ S.profile.split=k; S.profile.focus=[]; S.profile.days=SPLITS[k].days.length; S.program=generate(S.profile); S.cycle={done:[],skipped:[]}; EDIT=null; progDay=null; save(); closeSheet(); render(); toast(`Split : ${SPLITS[k].n}`) };
       if(S.program.custom) actionSheet({title:'Remplacer ton programme personnalisé ?',msg:'Tes séances modifiées seront remplacées par le nouveau split. Ton historique est conservé.',actions:[{label:'Changer de split',style:'destructive',fn:apply}]}); else apply(); break; }
     case 'resetAuto': actionSheet({title:'Revenir au programme automatique ?',msg:'Tes séances modifiées seront remplacées. Ton historique est conservé.',actions:[{label:'Revenir au programme auto',style:'destructive',fn:()=>{S.program=generate(S.profile);S.cycle={done:[],skipped:[]};EDIT=null;progDay=null;save();render();toast('Programme automatique rétabli')}}]}); break;
     case 'crea': creaSheet(); break;
