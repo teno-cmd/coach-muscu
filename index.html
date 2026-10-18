@@ -1924,11 +1924,11 @@ function finish(){
   const A=S.active; if(!A) return; const doneEx=A.ex.filter(e=>e.sets.some(s=>s.done));
   cancelBeeps(); releaseWake();
   if(!doneEx.length){S.active=null;save();go('home');toast('Aucune série validée','info');return}
-  let vol=0,sets=0;const prs=[];
+  let vol=0,sets=0;const prs=[], prD=[];
   const exs=doneEx.map(e=>{
     const ds=e.sets.filter(s=>s.done); ds.forEach(s=>{vol+=(s.w||0)*s.r;sets++});
     const maxW=Math.max(...ds.map(s=>s.w||0)), prev=bestOf(e.id);
-    if(maxW>0&&prev>0&&maxW>prev) prs.push(`${EX[e.id].n} · ${fmtNum(maxW)} kg`);
+    if(maxW>0&&prev>0&&maxW>prev){ prs.push(`${EX[e.id].n} · ${fmtNum(maxW)} kg`); prD.push({n:EX[e.id].n,w:maxW,d:maxW-prev,r:Math.max(...ds.filter(s=>(s.w||0)===maxW).map(s=>s.r))}) }
     S.last[e.id]={w:noLoad(e.id)?null:maxW,reps:ds.map(s=>s.r),allTop:ds.length>=e.sets.length&&ds.every(s=>s.r>=e.rmax&&(s.w||0)>=maxW),d:Date.now()};
     return {id:e.id,sets:ds.map(s=>({w:s.w,r:s.r}))};
   });
@@ -1939,7 +1939,7 @@ function finish(){
    <div class="sec"><div class="grp stats4 c3"><div><b>${Math.max(1,Math.round(entry.dur/60000))} min</b><span>Durée</span></div><div><b>${entry.sets}</b><span>Séries</span></div><div><b>${fmtVol(entry.vol)}</b><span>Volume</span></div></div></div>
    ${prs.length?sec('Nouveaux records',prs.map(p=>cell({icon:ic('trophy'),bg:'var(--orange)',title:esc(p)})).join('')):''}
    ${(()=>{const sc=supportCard(prs); if(sc) return sc;
-      if(prs.length){ _lastPRs=prs; return sec('',cell({a:'sharePR',icon:ic('share'),bg:'var(--green)',title:prs.length>1?'Partage tes records à un ami':'Partage ton record à un ami',sub:'Montre-lui ta progression et défie-le avec Coach Muscu',chev:true})) }
+      if(prs.length){ _lastPRs=prD.sort((a,b)=>b.d/b.w-a.d/a.w); return sec('',cell({a:'sharePR',icon:ic('share'),bg:'var(--green)',title:prs.length>1?'Partage tes records à un ami':'Partage ton record à un ami',sub:'Montre-lui ta progression et défie-le avec Coach Muscu',chev:true})) }
       return S.history.length%3===0?recoverySec():''})()}
    ${sec('',cell({icon:ic('sparkles'),bg:'var(--indigo)',title:'Progression automatique',sub:'Quand toutes tes séries atteignent le haut de la fourchette, la charge augmente à la séance suivante.'}))}
    <div class="btnwrap"><button class="btn" data-a="closeSheet">Terminé</button></div>`,{title:'Résumé'});
@@ -2356,7 +2356,48 @@ const SHOP_GEAR={creatine:['💊','Créatine monohydrate','créatine monohydrate
  barres:['🍫','Barres protéinées','barres protéinées'],whey:['🥛','Whey protéine','whey protéine']};
 const APP_URL='https://teno-cmd.github.io/coach-muscu/';
 /* Partager l'appli : feuille de partage du téléphone, sinon copie du lien */
-let _lastPRs=[];
+let _lastPRs=[], _prFile=null;
+const prText=()=>(_lastPRs.length>1?'Nouveaux records 🏆\n':'Nouveau record 🏆 ')+_lastPRs.map(r=>`${r.n} · ${fmtNum(r.w)} kg`).join('\n')+'\nJe m’entraîne avec Coach Muscu, viens me battre 💪';
+const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src});
+/* Image « story » 1080×1920 du record, dessinée sur le téléphone (rien n'est envoyé) */
+async function recordImage(prs){
+  const W=1080,H=1920,c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d');
+  const FF='-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Inter,system-ui,sans-serif', TINT='#c8ff2e';
+  const F=(w,px)=>x.font=`${w} ${px}px ${FF}`, T=(t,y,col,al)=>{x.fillStyle=col;x.textAlign=al||'center';x.fillText(t,W/2,y)};
+  const fit=(t,w,px,max)=>{F(w,px); while(x.measureText(t).width>max&&px>24){px-=2;F(w,px)} return px};
+  x.fillStyle='#000'; x.fillRect(0,0,W,H);
+  let g=x.createRadialGradient(W/2,880,0,W/2,880,760); g.addColorStop(0,'rgba(200,255,46,.30)'); g.addColorStop(1,'rgba(200,255,46,0)'); x.fillStyle=g; x.fillRect(0,0,W,H);
+  try{ const im=await loadImg('icon-512.png'); x.save(); x.beginPath(); x.roundRect?x.roundRect(W/2-70,150,140,140,32):x.rect(W/2-70,150,140,140); x.clip(); x.drawImage(im,W/2-70,150,140,140); x.restore() }catch(e){}
+  F(600,36); T('COACH MUSCU',350,'rgba(235,235,245,.6)');
+  const main=prs[0];
+  F(700,46); const lbl=prs.length>1?'🏆  NOUVEAUX RECORDS':'🏆  NOUVEAU RECORD', lw=x.measureText(lbl).width+80;
+  x.fillStyle='rgba(200,255,46,.14)'; x.beginPath(); x.roundRect?x.roundRect(W/2-lw/2,500,lw,88,44):x.rect(W/2-lw/2,500,lw,88); x.fill(); T(lbl,560,TINT);
+  fit(main.n,700,72,940); T(main.n,740,'#fff');
+  const num=fmtNum(main.w); F(800,300); const nw=x.measureText(num).width; F(700,110); const kw=x.measureText(' kg').width, x0=W/2-(nw+kw)/2;
+  x.textAlign='left'; F(800,300); x.fillStyle=TINT; x.fillText(num,x0,1060); F(700,110); x.fillText(' kg',x0+nw,1060);
+  F(500,46); T(`${main.r} rép. · +${fmtNum(main.d)} kg sur ton ancien record`,1160,'rgba(235,235,245,.75)');
+  prs.slice(1,4).forEach((r,i)=>{ fit(`${r.n} · ${fmtNum(r.w)} kg (+${fmtNum(r.d)} kg)`,600,44,940); T(`${r.n} · ${fmtNum(r.w)} kg (+${fmtNum(r.d)} kg)`,1300+i*70,'#fff') });
+  F(500,36); T(new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),1600,'rgba(235,235,245,.45)');
+  F(500,36); T('Ton programme de muscu gratuit sur',1735,'rgba(235,235,245,.6)');
+  F(700,42); T(APP_URL.replace(/^https:\/\//,'').replace(/\/$/,''),1795,'#fff');
+  return await new Promise(res=>c.toBlob(res,'image/png'));
+}
+async function prShareSheet(){
+  openSheet(`<div class="pad center"><div class="sub">Création de l’image…</div></div>`,{title:'Partager'});
+  let blob=null; try{ blob=await recordImage(_lastPRs) }catch(e){}
+  const body=$('#shScroll'); if(!body) return;
+  if(!blob){ body.innerHTML=`<div class="btnwrap"><button class="btn" data-a="prShareTxt">${ic('share')} Partager en message</button></div>`; return }
+  _prFile=new File([blob],'record-coach-muscu.png',{type:'image/png'});
+  body.innerHTML=`<div class="pad center"><img src="${URL.createObjectURL(blob)}" alt="Image de ton record" style="width:62%;max-width:300px;border-radius:18px;box-shadow:0 0 0 .5px var(--sep)"></div>
+    <div class="btnwrap"><button class="btn" data-a="prShareGo">${ic('share')} Partager l’image</button><button class="btn gray" data-a="prShareTxt">Envoyer en message texte</button></div>
+    <div class="sec-f center" style="margin:-16px 20px 24px">Idéal en story Instagram ou dans une conversation. L’image est créée sur ton téléphone.</div>`;
+}
+async function prShareGo(){
+  if(!_prFile) return;
+  const d={files:[_prFile],text:prText()+'\n'+APP_URL};
+  try{ if(navigator.canShare&&navigator.canShare({files:[_prFile]})){ await navigator.share(d); return } }catch(e){ if(e&&e.name==='AbortError') return }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(_prFile); a.download=_prFile.name; document.body.appendChild(a); a.click(); a.remove(); toast('Image enregistrée');
+}
 async function shareApp(txt){
   const d={title:'Coach Muscu',text:txt||'Coach Muscu : programme de muscu personnalisé, séances guidées et compteur de calories. Gratuit, sans pub.',url:APP_URL};
   try{ if(navigator.share){ await navigator.share(d); return } }catch(e){ if(e&&e.name==='AbortError') return }
@@ -3067,7 +3108,9 @@ document.addEventListener('click',ev=>{
     case 'nutriSrc': nutriSrcSheet(); break;
     case 'legal': legalSheet(); break;
     case 'share': shareApp(); break;
-    case 'sharePR': shareApp((_lastPRs.length>1?'Nouveaux records 🏆\n':'Nouveau record 🏆 ')+_lastPRs.join('\n')+'\nJe m’entraîne avec Coach Muscu, viens me battre 💪'); break;
+    case 'sharePR': prShareSheet(); break;
+    case 'prShareGo': prShareGo(); break;
+    case 'prShareTxt': shareApp(prText()); break;
     case 'eqShop': { const sc=eqShopSec(F||S.profile); if(!sc) break; const box=$('#eqShopBox');
       if(box){ box.innerHTML=sc; box.scrollIntoView({behavior:'smooth',block:'start'}) }
       else openSheet(`<div class="pad"><div class="t2">Compléter mon matériel</div><div class="sub">Avec ces essentiels, ton programme maison propose plus d’exercices et des charges plus adaptées.</div></div>${sc}`,{title:'Matériel'});
