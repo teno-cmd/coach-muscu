@@ -1927,7 +1927,7 @@ function finish(){
    <div class="sec"><div class="grp stats4 c3"><div><b>${Math.max(1,Math.round(entry.dur/60000))} min</b><span>Durée</span></div><div><b>${entry.sets}</b><span>Séries</span></div><div><b>${fmtVol(entry.vol)}</b><span>Volume</span></div></div></div>
    ${prs.length?sec('Nouveaux records',prs.map(p=>cell({icon:ic('trophy'),bg:'var(--orange)',title:esc(p)})).join('')):''}
    ${(()=>{const sc=supportCard(prs); if(sc) return sc;
-      if(prs.length) return sec('',shareCell('Fais découvrir l’appli à ton partenaire de salle'));
+      if(prs.length){ _lastPRs=prs; return sec('',cell({a:'sharePR',icon:ic('share'),bg:'var(--green)',title:prs.length>1?'Partage tes records à un ami':'Partage ton record à un ami',sub:'Montre-lui ta progression et défie-le avec Coach Muscu',chev:true})) }
       return S.history.length%3===0?recoverySec():''})()}
    ${sec('',cell({icon:ic('sparkles'),bg:'var(--indigo)',title:'Progression automatique',sub:'Quand toutes tes séries atteignent le haut de la fourchette, la charge augmente à la séance suivante.'}))}
    <div class="btnwrap"><button class="btn" data-a="closeSheet">Terminé</button></div>`,{title:'Résumé'});
@@ -2344,10 +2344,11 @@ const SHOP_GEAR={creatine:['💊','Créatine monohydrate','créatine monohydrate
  barres:['🍫','Barres protéinées','barres protéinées'],whey:['🥛','Whey protéine','whey protéine']};
 const APP_URL='https://teno-cmd.github.io/coach-muscu/';
 /* Partager l'appli : feuille de partage du téléphone, sinon copie du lien */
-async function shareApp(){
-  const d={title:'Coach Muscu',text:'Coach Muscu : programme de muscu personnalisé, séances guidées et compteur de calories. Gratuit, sans pub.',url:APP_URL};
+let _lastPRs=[];
+async function shareApp(txt){
+  const d={title:'Coach Muscu',text:txt||'Coach Muscu : programme de muscu personnalisé, séances guidées et compteur de calories. Gratuit, sans pub.',url:APP_URL};
   try{ if(navigator.share){ await navigator.share(d); return } }catch(e){ if(e&&e.name==='AbortError') return }
-  try{ await navigator.clipboard.writeText(APP_URL); toast('Lien copié, colle-le à tes amis') }catch(e){ toast(APP_URL,'info') }
+  try{ await navigator.clipboard.writeText(txt?txt+'\n'+APP_URL:APP_URL); toast(txt?'Message copié, colle-le à un ami':'Lien copié, colle-le à tes amis') }catch(e){ toast(APP_URL,'info') }
 }
 const shareCell=(sub)=>cell({a:'share',icon:ic('share'),bg:'var(--green)',title:'Partager Coach Muscu',sub:sub||'Envoie l’appli à un ami ou à ton partenaire de salle',chev:true});
 /* Matériel utile selon l'exercice (seulement pour les gros exercices polyarticulaires) */
@@ -3054,6 +3055,7 @@ document.addEventListener('click',ev=>{
     case 'nutriSrc': nutriSrcSheet(); break;
     case 'legal': legalSheet(); break;
     case 'share': shareApp(); break;
+    case 'sharePR': shareApp((_lastPRs.length>1?'Nouveaux records 🏆\n':'Nouveau record 🏆 ')+_lastPRs.join('\n')+'\nJe m’entraîne avec Coach Muscu, viens me battre 💪'); break;
     case 'eqShop': { const sc=eqShopSec(F||S.profile); if(!sc) break; const box=$('#eqShopBox');
       if(box){ box.innerHTML=sc; box.scrollIntoView({behavior:'smooth',block:'start'}) }
       else openSheet(`<div class="pad"><div class="t2">Compléter mon matériel</div><div class="sub">Avec ces essentiels, ton programme maison propose plus d’exercices et des charges plus adaptées.</div></div>${sc}`,{title:'Matériel'});
