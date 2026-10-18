@@ -2848,6 +2848,9 @@ function fdList(){
   if(!CIQ) loadCiq();
   let off;
   if(/^\d{8,14}$/.test(q)) off=sec('Produits du commerce',cell({a:'offSearch',icon:ic('barcode'),bg:'var(--blue)',title:`Chercher le code-barres ${esc(q)}`,chev:true}));
+  else if(offDown()&&!L.offLoading) off=sec('Produits de marque',cell({a:'scanOpen',icon:ic('barcode'),bg:'var(--blue)',title:'Scanner le code-barres',sub:'Le moyen le plus sûr pour trouver un produit de marque',chev:true})
+      +cell({a:'offRetry',icon:ic('search'),bg:'var(--gray)',title:`<span class="ct sm">Réessayer la recherche « ${esc(L.q.trim())} » en ligne</span>`,chev:true}),
+      'La recherche par nom d’Open Food Facts est indisponible depuis les applis en ce moment. Le scan fonctionne, et l’appli retient chaque produit scanné pour la suite.');
   else if(L.offLoading) off=sec('Produits du commerce',cell({icon:ic('clock',1),bg:'var(--gray)',title:'Recherche en cours…',sub:'Open Food Facts'}));
   else if(L.off&&L.offFor===q) off=L.off.length?sec('Produits du commerce',L.off.map((o,i)=>cell({a:'offPick',attrs:`data-i="${i}"`,title:`<span class="ct sm">${esc(o.n)}${o.u==='ml'?' 🥤':''}</span>`,sub:`${r1(o.v[0])} kcal / 100 ${o.u} · P ${fmtNum(+o.v[1].toFixed(1))} · G ${fmtNum(+o.v[2].toFixed(1))} · L ${fmtNum(+o.v[3].toFixed(1))}`,chev:true})).join(''),'Valeurs des étiquettes (base collaborative Open Food Facts).'):sec('Produits du commerce',cell({title:'<span class="cs">Aucun produit trouvé pour cette recherche.</span>'}));
   else off=sec('Produits du commerce',cell({a:'offSearch',icon:ic('search'),bg:'var(--blue)',title:`<span class="ct sm">Rechercher « ${esc(L.q.trim())} » dans les produits du commerce</span>`,sub:'Marques et produits emballés · Open Food Facts',chev:true}));
@@ -2874,7 +2877,7 @@ function npSimHTML(name){
 }
 function nfForm(){
   const L=LG;
-  return `<div class="card alert" style="margin-bottom:14px">${ic('warn')}<div><b style="font-size:15px">Code ${esc(L.nf.code)} absent de la base</b><div class="sub" style="font-size:13px;line-height:18px">Ajoute-le une fois : recopie l’étiquette, ou pars d’un aliment similaire si les valeurs ne sont pas indiquées. Le prochain scan le retrouvera.</div></div></div>
+  return `<div class="card alert" style="margin-bottom:14px">${ic('warn')}<div><b style="font-size:15px">${L.offErr?`Impossible de vérifier le code ${esc(L.nf.code)}`:`Code ${esc(L.nf.code)} absent de la base`}</b><div class="sub" style="font-size:13px;line-height:18px">${L.offErr?esc(L.offErr)+' Tu peux aussi recopier l’étiquette ci-dessous : le prochain scan retrouvera le produit.':'Ajoute-le une fois : recopie l’étiquette, ou pars d’un aliment similaire si les valeurs ne sont pas indiquées. Le prochain scan le retrouvera.'}</div></div></div>
    ${sec('Nom du produit',`<label class="cell"><span class="cbody"><span class="ct">Nom</span></span><input class="cin" id="npN" value="${esc(L.nf.n)}" placeholder="Champignons de Paris…" style="width:190px;text-align:right" autocomplete="off"></label>`)}
    <div id="npSim">${npSimHTML(L.nf.n)}</div>
    ${sec('Valeurs nutritionnelles',`<div class="cell stack">${seg('npU',[['g','Solide · pour 100 g'],['ml','Boisson · pour 100 ml']],LG.nfU||(isLiquidName(L.nf.n)?'ml':'g'),'npU')}</div><label class="cell"><span class="cbody"><span class="ct">Calories</span></span><input class="cin" id="npK" type="number" inputmode="decimal" placeholder="0"><span class="unit">kcal</span></label>
@@ -3043,7 +3046,10 @@ const OFF_F='product_name,product_name_fr,brands,nutriments,serving_quantity,cod
 async function offFetch(url){ const ac=new AbortController(), to=setTimeout(()=>ac.abort(),12000);
   try{ const r=await fetch(url,{signal:ac.signal}); if(r.status===429) throw new Error('rate'); if(!r.ok) throw new Error('http'); return await r.json() }
   catch(e){ throw new Error(e.name==='AbortError'?'slow':e.message==='rate'?'rate':navigator.onLine===false?'offline':'http') } finally{ clearTimeout(to) } }
-const OFF_ERR={rate:'Trop de recherches depuis ton réseau mobile (limite d’Open Food Facts, partagée avec d’autres abonnés). Réessaie dans une minute, en Wi-Fi, ou scanne le code-barres.',slow:'Open Food Facts met trop de temps à répondre. Réessaie dans un instant.',offline:'Pas de connexion : utilise les aliments, tes produits ou la saisie rapide.',http:'Open Food Facts ne répond pas : service saturé, ou limite de recherches atteinte sur ton réseau mobile. Réessaie dans une minute ou en Wi-Fi. Le scan de code-barres reste plus fiable.'};
+const OFF_ERR={rate:'Open Food Facts limite le nombre de demandes depuis ton réseau. Réessaie dans une minute.',slow:'Open Food Facts met trop de temps à répondre. Réessaie dans un instant.',offline:'Pas de connexion pour le moment.',http:'Open Food Facts ne répond pas pour l’instant. Réessaie dans un moment.'};
+/* Open Food Facts réserve maintenant sa recherche par nom à son propre site : depuis l'appli elle échoue presque toujours.
+   Après un échec, on propose directement le scan pendant 10 minutes. */
+let _offDown=0; const offDown=()=>Date.now()-_offDown<10*60e3;
 async function barcodeLookup(code){
   if(!LG||!$('#lgBody')) logSheet();
   LG.tab='food'; LG.q=''; LG.sel=null; LG.offErr=null; LG.nf=null; LG.nfU=null; LG.nfUm=false;
@@ -3071,7 +3077,7 @@ async function offSearch(){
   if(LG._c&&LG._c[q]){LG.off=LG._c[q];LG.offFor=norm(q);fdRefresh();return}
   const wait=6000-(Date.now()-_offLast); if(wait>0){toast(`Patiente ${Math.ceil(wait/1000)} s entre deux recherches`,'timer');return}
   _offLast=Date.now(); LG.offLoading=true; LG.offErr=null; fdRefresh();
-  try{ LG.off=await offSearchRaw(q); LG.offFor=norm(q).trim() }catch(e){ LG.offErr=OFF_ERR[e.message]||OFF_ERR.http; LG.off=null }
+  try{ LG.off=await offSearchRaw(q); LG.offFor=norm(q).trim(); _offDown=0 }catch(e){ if(e.message==='offline') LG.offErr=OFF_ERR.offline; else _offDown=Date.now(); LG.off=null }
   LG.offLoading=false; if(LG) fdRefresh();
 }
 async function npOnline(){
@@ -3263,6 +3269,7 @@ document.addEventListener('click',ev=>{
     case 'rxPick': { const r=rxOf(el.dataset.id); LG.sel={kind:'rx',key:r.id,name:r.n,k:1}; lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'offPick': { const o=LG.off[+el.dataset.i]; offcPut(o); LG.sel=selFromProd(o); lgRefresh(); $('#shScroll').scrollTop=0; break; }
     case 'offSearch': offSearch(); break;
+    case 'offRetry': _offDown=0; offSearch(); break;
     case 'scanOpen': openScanner(); break;
     case 'swDel': { const w=el.closest('.swp'); if(w) swDelete(w); break; }
     case 'npFill': { const k=el.dataset.k, f=k.startsWith('mp_')?(S.myprod||{})[k.slice(3)]:k.startsWith('cq_')?(CIQ||{})[k.slice(3)]:FOODS[k]; if(!f) break; npSetVals(f.v,`Valeurs moyennes de « ${f.n} » (tables Ciqual / USDA). À ajuster si l’emballage indique autre chose.`); if(f.u==='ml'||f.u==='g') npUnit(f.u==='ml'?'ml':'g'); const nn=$('#npN'); if(nn&&!nn.value.trim()) nn.value=f.n; break; }
