@@ -479,6 +479,10 @@ const LEGAL={
   contact:'tenohlogic@gmail.com',
   updated:'18 octobre 2026',
 };
+/* STATISTIQUES ANONYMES — GoatCounter (sans cookie, sans identifiant, sans données personnelles).
+   - code : le code choisi sur goatcounter.com (tableau de bord : https://<code>.goatcounter.com).
+     Vide = aucune statistique n'est envoyée. Désactivable par l'utilisateur dans Profil › Réglages. */
+const STATS={code:''};
 const KEY = 'coachmuscu_v1';
 
 /* ---------- Groupes musculaires ---------- */
@@ -1815,6 +1819,7 @@ function vProfile(){
     ${sec('Réglages',
       cell({icon:ic('speaker'),bg:'var(--red)',title:'Signal sonore',sub:'Bips 3-2-1 à la fin du repos',right:`<button class="sw ${S.settings.sound?'on':''}" data-a="toggleSet" data-k="sound" aria-label="Son"></button>`})
      +cell({icon:ic('wave'),bg:'var(--orange)',title:'Vibrations',sub:'Retours haptiques (iOS 18+) et vibrations Android',right:`<button class="sw ${S.settings.vibe?'on':''}" data-a="toggleSet" data-k="vibe" aria-label="Vibrations"></button>`})
+     +(STATS.code?cell({icon:ic('wave'),bg:'var(--teal)',title:'Statistiques anonymes',sub:'Aide à savoir combien de personnes utilisent l’appli. Aucune donnée personnelle.',right:`<button class="sw ${S.settings.noStats?'':'on'}" data-a="statsToggle" aria-label="Statistiques anonymes"></button>`}):'')
      +cell({a:'testSound',icon:ic('play',1),bg:'var(--blue)',title:'Tester le son',chev:true})
      +cell({icon:ic('fork',1),bg:'var(--green)',title:'Mode OMAD',sub:'Un repas par jour : réglages dans l’onglet Nutrition',right:`<button class="sw ${NUT().omad?'on':''}" data-a="omadToggle" aria-label="Mode OMAD"></button>`}),
      'Sur iOS 17 et plus, le son est joué même en mode silencieux. Monte le volume avant ta séance.')}
@@ -1933,7 +1938,7 @@ function finish(){
     return {id:e.id,sets:ds.map(s=>({w:s.w,r:s.r}))};
   });
   const entry={d:Date.now(),n:A.n,dur:Date.now()-A.start,vol:Math.round(vol),sets,ex:exs,prs,custom:!!A.custom};
-  S.history.unshift(entry); if(!A.custom&&A.di>=0){ensureCycle(); if(!S.cycle.done.includes(A.di)) S.cycle.done.push(A.di); ensureCycle();} S.active=null; progDay=null; save();
+  S.history.unshift(entry); track('seance-terminee','Séance terminée'); if(prs.length) track('record','Nouveau record'); if(!A.custom&&A.di>=0){ensureCycle(); if(!S.cycle.done.includes(A.di)) S.cycle.done.push(A.di); ensureCycle();} S.active=null; progDay=null; save();
   go('home');
   openSheet(`<div class="pad center"><div class="hero-ic">${ic('trophy')}</div><h2 class="lt" style="font-size:28px;line-height:34px">Bien joué !</h2><div class="sub">${esc(entry.n)} terminée</div></div>
    <div class="sec"><div class="grp stats4 c3"><div><b>${Math.max(1,Math.round(entry.dur/60000))} min</b><span>Durée</span></div><div><b>${entry.sets}</b><span>Séries</span></div><div><b>${fmtVol(entry.vol)}</b><span>Volume</span></div></div></div>
@@ -2452,15 +2457,16 @@ function legalSheet(){
    ${sec('Hébergeur',T('GitHub, Inc. (GitHub Pages)','88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis')+A('github.com','','https://github.com'))}
    ${sec('Tes données',
       T('Tout reste sur ton téléphone','Profil, programme, séances, journal alimentaire et photos sont enregistrés uniquement dans la mémoire de ton navigateur. Il n’y a ni compte ni serveur Coach Muscu : le développeur ne reçoit et ne voit aucune de tes données.')
-     +T('Ni pub, ni pistage','Aucune publicité, aucune mesure d’audience, aucun cookie de suivi dans l’appli.')
+     +T('Ni pub, ni pistage',STATS.code?'Aucune publicité, aucun cookie, aucun identifiant. Seules des statistiques anonymes de fréquentation sont comptées (voir « Services extérieurs »).':'Aucune publicité, aucune mesure d’audience, aucun cookie de suivi dans l’appli.')
      +T('Caméra','Utilisée seulement pendant le scan d’un code-barres. L’image est lue sur le téléphone, puis ni enregistrée ni envoyée.')
      +T('Tes droits','Tu peux exporter tes données (Profil › Exporter une sauvegarde), tout effacer (Profil › Tout réinitialiser) ou simplement supprimer l’appli. Pour toute question, écris au contact ci-dessus. Tu peux aussi saisir la CNIL.'))}
    ${sec('Services extérieurs',
       T('Open Food Facts','Quand tu cherches un produit ou scannes un code-barres, ta recherche ou le code est envoyé à Open Food Facts (base collaborative et libre), sans aucune autre information sur toi.')
      +T('jsDelivr','Le lecteur de code-barres est téléchargé depuis jsDelivr la première fois que tu ouvres le scanner.')
+     +(STATS.code?T('GoatCounter (statistiques anonymes)','Pour savoir combien de personnes utilisent l’appli, GoatCounter compte les ouvertures et quelques actions (séance terminée, record, partage, clic sur un lien d’achat ou de don). Sans cookie ni identifiant, et sans aucune de tes données : ni profil, ni poids, ni séances, ni repas. Tu peux le désactiver dans Profil › Réglages.'):'')
      +T('GitHub','Comme tout hébergeur, GitHub peut enregistrer l’adresse IP des visites pour la sécurité du site.')
      +T('Liens externes','Amazon, Decathlon, Ko-fi, YouTube et les sources scientifiques s’ouvrent hors de l’appli. Ces sites appliquent leurs propres règles de confidentialité et de cookies.'),
-     'Ces services ne reçoivent ces informations que si tu utilises la fonction concernée.')}
+     'Open Food Facts et jsDelivr ne sont contactés que si tu utilises la fonction concernée.')}
    ${sec('Liens d’achat et dons',
       T('Liens « Où l’acheter »',MONEY.amazonTag?'Certains liens sont affiliés : en tant que Partenaire Amazon, Coach Muscu réalise un bénéfice sur les achats remplissant les conditions requises. Le prix reste le même pour toi.':'Les liens « Où l’acheter » mènent vers des boutiques en ligne, à titre indicatif. S’ils deviennent affiliés, cette page et les fiches concernées l’indiqueront.')
      +T('Dons',`Les dons via ${esc(MONEY.support.label||'Ko-fi')} sont libres et ponctuels. Ils ne débloquent rien : l’appli est la même pour tout le monde.`))}
@@ -3028,7 +3034,7 @@ document.addEventListener('click',ev=>{
       const daysChanged=!S.profile||S.profile.days!==+F.days, nsplit=splitOf({days:+F.days,split:F.split}), splitChanged=!S.profile||splitOf(S.profile)!==nsplit||(focusOf(S.profile)||[]).join()!==(focusOf(F)||[]).join();
       S.profile={split:nsplit,sex:F.sex,age,weight:w,height:h,level:F.level,goal:F.goal,days:+F.days,prio:(F.prio||[]).slice(0,3),place:F.place||'gym',equip:[...(F.equip||[])],hmax:+F.hmax||20,kbmax:+F.kbmax||16,chain:F.chain||'onair',noMach:[...(F.noMach||[])],focus:[...(focusOf(F)||[])]};
       const fin=()=>{ S.program=generate(S.profile); if(daysChanged||splitChanged) S.cycle={done:[],skipped:[]}; progDay=null; EDIT=null; F=null; save();
-        toast(first?'Programme généré':'Programme mis à jour'); go(first?'home':'program','fade') };
+        if(first) track('profil-cree','Profil créé'); toast(first?'Programme généré':'Programme mis à jour'); go(first?'home':'program','fade') };
       if(S.program&&S.program.custom){
         if(daysChanged||splitChanged) actionSheet({title:'Remplacer ton programme personnalisé ?',msg:`Le programme « ${esc(progName({days:+F.days,split:nsplit,focus:focusOf(F)||[]}))} » va générer un nouveau programme. Tes séances modifiées seront remplacées (ton historique est conservé).`,
           actions:[{label:'Générer le nouveau programme',style:'destructive',fn:fin},{label:'Garder mon programme perso',fn:()=>{F=null;save();toast('Profil enregistré · programme perso conservé');go('program','fade')}}]});
@@ -3107,10 +3113,11 @@ document.addEventListener('click',ev=>{
     case 'rxK': { rxK=Math.min(3,Math.max(.5,Math.round((rxK+(+el.dataset.d)*.25)*4)/4)); const b=$('#rxBody'); if(b) b.innerHTML=rxBody(); haptic(); break; }
     case 'nutriSrc': nutriSrcSheet(); break;
     case 'legal': legalSheet(); break;
-    case 'share': shareApp(); break;
+    case 'share': track('partage-appli','Partage de l’appli'); shareApp(); break;
     case 'sharePR': prShareSheet(); break;
-    case 'prShareGo': prShareGo(); break;
-    case 'prShareTxt': shareApp(prText()); break;
+    case 'prShareGo': track('partage-record-image','Partage d’un record (image)'); prShareGo(); break;
+    case 'prShareTxt': track('partage-record-texte','Partage d’un record (texte)'); shareApp(prText()); break;
+    case 'statsToggle': S.settings.noStats=!S.settings.noStats; el.classList.toggle('on',!S.settings.noStats); save(); haptic(); break;
     case 'eqShop': { const sc=eqShopSec(F||S.profile); if(!sc) break; const box=$('#eqShopBox');
       if(box){ box.innerHTML=sc; box.scrollIntoView({behavior:'smooth',block:'start'}) }
       else openSheet(`<div class="pad"><div class="t2">Compléter mon matériel</div><div class="sub">Avec ces essentiels, ton programme maison propose plus d’exercices et des charges plus adaptées.</div></div>${sc}`,{title:'Matériel'});
@@ -3293,6 +3300,20 @@ function installBody(){
 function installGuide(){ try{localStorage.setItem(INST_KEY,'1')}catch(e){} openSheet(`<div id="instBody">${installBody()}</div>`,{title:'Installation'}) }
 function maybeInstallGuide(){ if(isStandalone()) return; let seen=null; try{seen=localStorage.getItem(INST_KEY)}catch(e){} if(!seen) setTimeout(()=>{ if(!$('#sheet').classList.contains('open')&&!S.active) installGuide() },1200) }
 
+/* ---------- Statistiques anonymes ----------
+   Seuls un chemin (« / ») ou un nom d'action (« seance-terminee ») partent vers GoatCounter :
+   jamais le profil, le poids, les séances ou les repas. */
+function stat(path,title,isEv){
+  if(!STATS.code||S.settings.noStats||!/^https:$/.test(location.protocol)) return;
+  try{ const q=new URLSearchParams({p:path,t:title||path}); if(isEv) q.set('e','true');
+    if(!isEv&&screen&&screen.width) q.set('s',screen.width+','+screen.height+','+(window.devicePixelRatio||1));
+    q.set('rnd',Math.random().toString(36).slice(2,8));
+    new Image().src=`https://${STATS.code}.goatcounter.com/count?${q}`; }catch(e){}
+}
+const track=(name,title)=>stat(name,title||name,true);
+document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href]'); if(!a) return; const h=a.href;
+  if(/amazon\.fr/.test(h)) track('lien-amazon','Clic sur un lien Amazon'); else if(/decathlon\.fr/.test(h)) track('lien-decathlon','Clic sur un lien Decathlon'); else if(MONEY.support.url&&h.startsWith(MONEY.support.url)) track('lien-don','Clic sur le lien de don')},true);
+
 /* ---------- Démarrage ---------- */
 if(S.profile && !S.program){S.program=generate(S.profile);save()}
 if(S.profile && !S.profile.prio){S.profile.prio=[]}
@@ -3301,6 +3322,7 @@ if(S.profile && !S.profile.chain){Object.assign(S.profile,{chain:'onair',noMach:
 if(S.program) ensureCycle();
 setupPWA();
 render();
+stat('/',isStandalone()?'Ouverture (appli installée)':'Ouverture (navigateur)'); if(isStandalone()) track('ouverture-appli-installee','Ouverture depuis l’écran d’accueil');
 maybeInstallGuide();
 setInterval(tick,250);
 requestAnimationFrame(animLoop);
